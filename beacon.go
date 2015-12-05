@@ -1,6 +1,7 @@
 package wifistack
 
 import (
+	"bytes"
 	"encoding/binary"
 	"strconv"
 )
@@ -72,6 +73,7 @@ func DecodeBeacon(f *Frame) (*Beacon, error) {
 	return &res, nil
 }
 
+// SSID returns a string representation of the SSID tag.
 func (f *Beacon) SSID() string {
 	ssidTag := f.Tags[BeaconTagSSID]
 	if ssidTag == nil {
@@ -80,10 +82,38 @@ func (f *Beacon) SSID() string {
 	return string(ssidTag)
 }
 
+// Channel returns an integer representation of the channel tag.
 func (f *Beacon) Channel() int {
 	channelTag := f.Tags[BeaconTagChannel]
 	if channelTag == nil || len(channelTag) == 0 {
 		return -1
 	}
 	return int(channelTag[0])
+}
+
+// EncodeToFrame generates an 802.11 frame which represents this beacon.
+func (f *Beacon) EncodeToFrame() *Frame {
+	var buf bytes.Buffer
+
+	header := make([]byte, 12)
+	binary.LittleEndian.PutUint64(header, f.Timestamp)
+	binary.LittleEndian.PutUint16(header[8:], f.Interval)
+	binary.LittleEndian.PutUint16(header[10:], f.Capabilities)
+
+	buf.Write(header)
+
+	for tag, value := range f.Tags {
+		buf.WriteByte(byte(tag))
+		buf.WriteByte(byte(len(value)))
+		buf.Write(value)
+	}
+
+	return &Frame{
+		Version: 0,
+		Type: FrameTypeBeacon,
+		MAC1: [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		MAC2: f.BSSID,
+		MAC3: f.BSSID,
+		Payload: buf.Bytes(),
+	}
 }

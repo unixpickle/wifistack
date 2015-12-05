@@ -1,6 +1,7 @@
 package wifistack
 
 import (
+	"bytes"
 	"encoding/binary"
 	"hash/crc32"
 )
@@ -79,29 +80,12 @@ func DecodeFrame(data []byte) (*Frame, error) {
 	subtype := int(data[0]>>4) & 0xf
 	res.Type = NewFrameType(majorType, subtype)
 
-	if (data[1] & 1) != 0 {
-		res.FromDS = true
-	}
-	if (data[1] & 2) != 0 {
-		res.ToDS = true
-	}
-	if (data[1] & 4) != 0 {
-		res.MoreFrag = true
-	}
-	if (data[1] & 8) != 0 {
-		res.Retry = true
-	}
-	if (data[1] & 0x10) != 0 {
-		res.PowerManagement = true
-	}
-	if (data[1] & 0x20) != 0 {
-		res.MoreData = true
-	}
-	if (data[1] & 0x40) != 0 {
-		res.Encrypted = true
-	}
-	if (data[1] & 0x80) != 0 {
-		res.Order = true
+	flags := []*bool{&res.FromDS, &res.ToDS, &res.MoreFrag, &res.Retry, &res.PowerManagement,
+		&res.MoreData, &res.Encrypted, &res.Order}
+	for i, flagPtr := range flags {
+		if (data[1] & (1 << uint(i))) != 0 {
+			*flagPtr = true
+		}
 	}
 
 	res.DurationID = binary.BigEndian.Uint16(data[2:])
@@ -122,4 +106,46 @@ func DecodeFrame(data []byte) (*Frame, error) {
 // Becon returns true if the frame is a WiFi beacon.
 func (f *Frame) Beacon() bool {
 	return f.Version == 0 && f.Type == FrameTypeBeacon
+}
+
+// Encode encodes the frame as binary.
+// This generates the trailing checksum automatically.
+func (f *Frame) Encode() []byte {
+	var buf bytes.Buffer
+
+	buf.WriteByte(byte((f.Type.Type() << 2) | (f.Type.Subtype() << 4) | f.Version))
+
+	var flagByte byte
+	flags := []bool{f.FromDS, f.ToDS, f.MoreFrag, f.Retry, f.PowerManagement,
+		f.MoreData, f.Encrypted, f.Order}
+	for i, flag := range flags {
+		if flag {
+			flagByte |= byte(1 << uint(i))
+		}
+	}
+	buf.WriteByte(flagByte)
+
+	numBuf := make([]byte, 2)
+	binary.BigEndian.PutUint16(numBuf, f.DurationID)
+	buf.Write(numBuf)
+
+	buf.Write(f.MAC1[:])
+	buf.Write(f.MAC2[:])
+	buf.Write(f.MAC3[:])
+
+	binary.BigEndian.PutUint16(numBuf, f.SequenceControl)
+	buf.Write(numBuf)
+
+	if f.MAC4 != nil {
+		buf.Write(f.MAC4)
+	}
+
+	buf.Write(f.Payload)
+
+	checksum := crc32.ChecksumIEEE(buf.Bytes())
+	checksumBuf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(checksumBuf, checksum)
+	buf.Write(checksumBuf)
+
+	return buf.Bytes()
 }

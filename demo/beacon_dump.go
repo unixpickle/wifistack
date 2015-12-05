@@ -45,8 +45,6 @@ func main() {
 			} else {
 				log.Println("got beacon:", beacon.SSID())
 			}
-		} else {
-			log.Println("got frame with payload of", len(frame.Payload), "bytes")
 		}
 	}
 }
