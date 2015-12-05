@@ -38,6 +38,15 @@ func main() {
 		if err != nil {
 			continue
 		}
-		log.Println("got frame with payload of", len(frame.Payload), "bytes")
+		if frame.Beacon() {
+			beacon, err := wifistack.DecodeBeacon(frame)
+			if err != nil {
+				log.Println("got invalid beacon:", err)
+			} else {
+				log.Println("got beacon:", beacon.SSID())
+			}
+		} else {
+			log.Println("got frame with payload of", len(frame.Payload), "bytes")
+		}
 	}
 }

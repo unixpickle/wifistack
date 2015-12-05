@@ -5,10 +5,34 @@ import (
 	"hash/crc32"
 )
 
+// A FrameType represents a pair (type, subtype) where type is
+// two bits and subtype is four bits.
+// A FrameType is encoded as (type << 4) | subtype.
+type FrameType int
+
+// NewFrame generates a frame type using a type and subtype.
+func NewFrameType(majorType, subtype int) FrameType {
+	return FrameType((majorType << 4) | subtype)
+}
+
+// Type returns the two-bit major type number.
+func (f FrameType) Type() int {
+	return int(f) >> 4
+}
+
+// Subtype returns the four-bit subtype number.
+func (f FrameType) Subtype() int {
+	return int(f) & 0xf
+}
+
+const (
+	FrameTypeBeacon FrameType = 0x08
+)
+
+// A Frame is the fundamental unit used for communication on WiFi networks.
 type Frame struct {
 	Version         int
-	Type            int
-	Subtype         int
+	Type            FrameType
 	FromDS          bool
 	ToDS            bool
 	MoreFrag        bool
@@ -19,18 +43,25 @@ type Frame struct {
 	Order           bool
 
 	DurationID uint16
-	MAC1       [6]byte
-	MAC2       [6]byte
-	MAC3       [6]byte
+
+	MAC1 [6]byte
+	MAC2 [6]byte
+	MAC3 [6]byte
 
 	SequenceControl uint16
-	MAC4            [6]byte
+
+	// MAC4 is the fourth MAC address which is not present in every
+	// 802.11 MAC frame.
+	// If this is nil, then it is not present.
+	MAC4 []byte
 
 	Payload []byte
 }
 
+// DecodeFrame decodes a raw WiFi frame.
+// The data should include a 32-bit checksum.
 func DecodeFrame(data []byte) (*Frame, error) {
-	// TODO: some frames may be less than 28 bytes (I think).
+	// TODO: some frames actually may be less than 28 bytes (I think).
 	if len(data) < 28 {
 		return nil, ErrBufferUnderflow
 	}
@@ -43,8 +74,11 @@ func DecodeFrame(data []byte) (*Frame, error) {
 
 	res := Frame{}
 	res.Version = int(data[0]) & 3
-	res.Type = int(data[0]>>2) & 3
-	res.Subtype = int(data[0]>>4) & 0xf
+
+	majorType := int(data[0]>>2) & 3
+	subtype := int(data[0]>>4) & 0xf
+	res.Type = NewFrameType(majorType, subtype)
+
 	if (data[1] & 1) != 0 {
 		res.FromDS = true
 	}
@@ -83,4 +117,9 @@ func DecodeFrame(data []byte) (*Frame, error) {
 	res.Payload = data[24 : len(data)-4]
 
 	return &res, nil
+}
+
+// Becon returns true if the frame is a WiFi beacon.
+func (f *Frame) Beacon() bool {
+	return f.Version == 0 && f.Type == FrameTypeBeacon
 }
