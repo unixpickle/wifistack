@@ -190,7 +190,9 @@ func (f *Frame) String() string {
 	var description bytes.Buffer
 
 	description.WriteString(f.Type.String())
-	description.WriteString(": ")
+	description.WriteString(" (v")
+	description.WriteString(strconv.Itoa(f.Version))
+	description.WriteString("):")
 
 	flags := []bool{f.FromDS, f.ToDS, f.MoreFrag, f.Retry, f.PowerManagement,
 		f.MoreData, f.Encrypted, f.Order}
@@ -201,13 +203,12 @@ func (f *Frame) String() string {
 			description.WriteRune('0')
 		}
 	}
-	description.WriteRune(' ')
 
-	description.WriteRune('[')
+	description.WriteRune(' ')
 	description.WriteString(macToString(f.MAC3))
-	description.WriteString("] ")
+	description.WriteString(",")
 	description.WriteString(macToString(f.MAC2))
-	description.WriteString(" -> ")
+	description.WriteString(",")
 	description.WriteString(macToString(f.MAC1))
 
 	description.WriteRune(' ')
