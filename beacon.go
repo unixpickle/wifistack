@@ -110,10 +110,10 @@ func (f *Beacon) EncodeToFrame() *Frame {
 
 	return &Frame{
 		Version: 0,
-		Type: FrameTypeBeacon,
-		MAC1: [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		MAC2: f.BSSID,
-		MAC3: f.BSSID,
+		Type:    FrameTypeBeacon,
+		MAC1:    [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		MAC2:    f.BSSID,
+		MAC3:    f.BSSID,
 		Payload: buf.Bytes(),
 	}
 }
