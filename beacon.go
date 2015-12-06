@@ -3,7 +3,6 @@ package wifistack
 import (
 	"bytes"
 	"encoding/binary"
-	"sort"
 	"strconv"
 )
 
@@ -56,19 +55,12 @@ func DecodeBeacon(f *Frame) (*Beacon, error) {
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload[10:])
 
 	res.Tags = map[BeaconTag][]byte{}
-
-	i := 12
-	for i+2 < len(f.Payload) {
-		tagType := BeaconTag(f.Payload[i])
-		length := int(f.Payload[i+1])
-		if length+i+2 > len(f.Payload) {
-			return nil, ErrBufferUnderflow
-		}
-		res.Tags[tagType] = f.Payload[i+2 : i+2+length]
-		i += 2 + length
+	decodedTags, err := decodeManagementTags(f.Payload[12:])
+	if err != nil {
+		return nil, err
 	}
-	if i < len(f.Payload) {
-		return nil, ErrBufferOverflow
+	for tag, value := range decodedTags {
+		res.Tags[BeaconTag(tag)] = value
 	}
 
 	return &res, nil
@@ -103,19 +95,11 @@ func (f *Beacon) EncodeToFrame() *Frame {
 
 	buf.Write(header)
 
-	// NOTE: the specification says that these should be encoded in order.
-	tagIds := make([]int, 0, len(f.Tags))
-	for tag := range f.Tags {
-		tagIds = append(tagIds, int(tag))
+	tagIds := map[int][]byte{}
+	for tag, value := range f.Tags {
+		tagIds[int(tag)] = value
 	}
-	sort.Ints(tagIds)
-
-	for tag := range tagIds {
-		value := f.Tags[BeaconTag(tag)]
-		buf.WriteByte(byte(tag))
-		buf.WriteByte(byte(len(value)))
-		buf.Write(value)
-	}
+	buf.Write(encodeManagementTags(tagIds))
 
 	return &Frame{
 		Version: 0,
