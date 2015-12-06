@@ -3,6 +3,7 @@ package wifistack
 import (
 	"bytes"
 	"encoding/binary"
+	"sort"
 	"strconv"
 )
 
@@ -102,7 +103,15 @@ func (f *Beacon) EncodeToFrame() *Frame {
 
 	buf.Write(header)
 
-	for tag, value := range f.Tags {
+	// NOTE: the specification says that these should be encoded in order.
+	tagIds := make([]int, 0, len(f.Tags))
+	for tag := range f.Tags {
+		tagIds = append(tagIds, int(tag))
+	}
+	sort.Ints(tagIds)
+
+	for tag := range tagIds {
+		value := f.Tags[BeaconTag(tag)]
 		buf.WriteByte(byte(tag))
 		buf.WriteByte(byte(len(value)))
 		buf.Write(value)
