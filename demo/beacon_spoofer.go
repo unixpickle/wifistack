@@ -27,7 +27,7 @@ func main() {
 
 	copy(beacon.BSSID[1:], []byte("HELLO"))
 	beacon.Tags = map[wifistack.BeaconTag][]byte{
-		wifistack.BeaconTagSSID: []byte("Spoofed Network"),
+		wifistack.BeaconTagSSID:    []byte("Spoofed Network"),
 		wifistack.BeaconTagChannel: []byte{11},
 	}
 	frameData := beacon.EncodeToFrame().Encode()

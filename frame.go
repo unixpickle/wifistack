@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"hash/crc32"
+	"strconv"
 )
 
 // A FrameType represents a pair (type, subtype) where type is
@@ -26,9 +27,43 @@ func (f FrameType) Subtype() int {
 	return int(f) & 0xf
 }
 
+// String returns a long, human-readable name for this FrameType
+// if one is available.
+func (f FrameType) String() string {
+	if name, ok := frameTypeNames[f]; ok {
+		return name
+	} else {
+		return "FrameType(" + strconv.Itoa(int(f)) + ")"
+	}
+}
+
 const (
-	FrameTypeBeacon FrameType = 0x08
+	FrameTypeAssocRequest    FrameType = 0
+	FrameTypeAssocResponse             = 1
+	FrameTypeReassocRequest            = 2
+	FrameTypeReassocResponse           = 3
+	FrameTypeProbeRequest              = 4
+	FrameTypeProbeResponse             = 5
+	FrameTypeBeacon                    = 8
+	FrameTypeATIM                      = 9
+	FrameTypeDisassoc                  = 0xa
+	FrameTypeAuth                      = 0xb
+	FrameTypeDeauth                    = 0xc
 )
+
+var frameTypeNames map[FrameType]string = map[FrameType]string{
+	FrameTypeAssocRequest:    "Association Request",
+	FrameTypeAssocResponse:   "Association Response",
+	FrameTypeReassocRequest:  "Reassociation Request",
+	FrameTypeReassocResponse: "Reassociation Response",
+	FrameTypeProbeRequest:    "Probe Request",
+	FrameTypeProbeResponse:   "Probe Response",
+	FrameTypeBeacon:          "Beacon",
+	FrameTypeATIM:            "Announcement Traffic Indication Message",
+	FrameTypeDisassoc:        "Disassociation",
+	FrameTypeAuth:            "Authentication",
+	FrameTypeDeauth:          "Deauthentication",
+}
 
 // A Frame is the fundamental unit used for communication on WiFi networks.
 type Frame struct {
@@ -148,4 +183,74 @@ func (f *Frame) Encode() []byte {
 	buf.Write(checksumBuf)
 
 	return buf.Bytes()
+}
+
+// String generates a pretty string to represent the packet.
+func (f *Frame) String() string {
+	var description bytes.Buffer
+
+	description.WriteString(f.Type.String())
+	description.WriteString(": ")
+
+	flags := []bool{f.FromDS, f.ToDS, f.MoreFrag, f.Retry, f.PowerManagement,
+		f.MoreData, f.Encrypted, f.Order}
+	for _, b := range flags {
+		if b {
+			description.WriteRune('1')
+		} else {
+			description.WriteRune('0')
+		}
+	}
+	description.WriteRune(' ')
+
+	description.WriteRune('[')
+	description.WriteString(macToString(f.MAC3))
+	description.WriteString("] ")
+	description.WriteString(macToString(f.MAC2))
+	description.WriteString(" -> ")
+	description.WriteString(macToString(f.MAC1))
+
+	description.WriteRune(' ')
+	description.WriteString(strconv.Itoa(int(f.DurationID)))
+	description.WriteRune(' ')
+	description.WriteString(strconv.Itoa(int(f.SequenceControl)))
+
+	if len(f.Payload) > 0 {
+		description.WriteRune(':')
+	}
+
+	for _, b := range f.Payload {
+		description.WriteRune(' ')
+		description.WriteString(byteToHex(b))
+	}
+
+	return description.String()
+}
+
+func byteToHex(n byte) string {
+	n1 := n >> 4
+	n2 := n & 0xf
+	res := ""
+	if n1 < 10 {
+		res += string('0' + n1)
+	} else {
+		res += string('a' + (n1 - 10))
+	}
+	if n2 < 10 {
+		res += string('0' + n2)
+	} else {
+		res += string('a' + (n2 - 10))
+	}
+	return res
+}
+
+func macToString(m [6]byte) string {
+	var buf bytes.Buffer
+	for i := 0; i < 6; i++ {
+		if i != 0 {
+			buf.WriteRune(':')
+		}
+		buf.WriteString(byteToHex(m[i]))
+	}
+	return buf.String()
 }
