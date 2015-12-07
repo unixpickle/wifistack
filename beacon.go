@@ -3,30 +3,6 @@ package wifistack
 import (
 	"bytes"
 	"encoding/binary"
-	"strconv"
-)
-
-type BeaconTag int
-
-var beaconTagNames = map[BeaconTag]string{
-	0: "SSID",
-	1: "rates",
-	3: "channel",
-}
-
-// String returns a human-readable version of the beacon, if available.
-func (b BeaconTag) String() string {
-	if name, ok := beaconTagNames[b]; ok {
-		return name
-	} else {
-		return "BeaconTag(" + strconv.Itoa(int(b)) + ")"
-	}
-}
-
-const (
-	BeaconTagSSID    BeaconTag = 0
-	BeaconTagRates             = 1
-	BeaconTagChannel           = 3
 )
 
 // A Beacon stores information specific to wireless beacons.
@@ -37,11 +13,11 @@ type Beacon struct {
 	Interval     uint16
 	Capabilities uint16
 
-	Tags map[BeaconTag][]byte
+	Elements ManagementElements
 }
 
 // DecodeBeacon extracts beacon information from a Frame.
-func DecodeBeacon(f *Frame) (*Beacon, error) {
+func DecodeBeacon(f *Frame) (beacon *Beacon, err error) {
 	if len(f.Payload) < 12 {
 		return nil, ErrBufferUnderflow
 	}
@@ -54,34 +30,30 @@ func DecodeBeacon(f *Frame) (*Beacon, error) {
 	res.Interval = binary.LittleEndian.Uint16(f.Payload[8:])
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload[10:])
 
-	res.Tags = map[BeaconTag][]byte{}
-	decodedTags, err := decodeManagementTags(f.Payload[12:])
+	res.Elements, err = DecodeManagementElements(f.Payload[12:])
 	if err != nil {
-		return nil, err
-	}
-	for tag, value := range decodedTags {
-		res.Tags[BeaconTag(tag)] = value
+		return
 	}
 
 	return &res, nil
 }
 
-// SSID returns a string representation of the SSID tag.
+// SSID returns a string representation of the SSID element.
 func (f *Beacon) SSID() string {
-	ssidTag := f.Tags[BeaconTagSSID]
+	ssidTag := f.Elements.Get(ManagementTagSSID)
 	if ssidTag == nil {
 		return ""
 	}
 	return string(ssidTag)
 }
 
-// Channel returns an integer representation of the channel tag.
+// Channel returns an integer representation of the channel element.
 func (f *Beacon) Channel() int {
-	channelTag := f.Tags[BeaconTagChannel]
-	if channelTag == nil || len(channelTag) == 0 {
+	channel := f.Elements.Get(ManagementTagDSSSParameterSet)
+	if channel == nil || len(channel) != 1 {
 		return -1
 	}
-	return int(channelTag[0])
+	return int(channel[0])
 }
 
 // EncodeToFrame generates an 802.11 frame which represents this beacon.
@@ -94,12 +66,7 @@ func (f *Beacon) EncodeToFrame() *Frame {
 	binary.LittleEndian.PutUint16(header[10:], f.Capabilities)
 
 	buf.Write(header)
-
-	tagIds := map[int][]byte{}
-	for tag, value := range f.Tags {
-		tagIds[int(tag)] = value
-	}
-	buf.Write(encodeManagementTags(tagIds))
+	buf.Write(f.Elements.Encode())
 
 	return &Frame{
 		Version: 0,

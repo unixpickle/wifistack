@@ -26,9 +26,9 @@ func main() {
 	beacon.Interval = 25
 
 	copy(beacon.BSSID[1:], []byte("HELLO"))
-	beacon.Tags = map[wifistack.BeaconTag][]byte{
-		wifistack.BeaconTagSSID:    []byte("Spoofed Network"),
-		wifistack.BeaconTagChannel: []byte{11},
+	beacon.Elements = wifistack.ManagementElements{
+		{wifistack.ManagementTagSSID, []byte("Spoofed Network")},
+		{wifistack.ManagementTagDSSSParameterSet, []byte{11}},
 	}
 	frameData := beacon.EncodeToFrame().Encode()
 	for {
