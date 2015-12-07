@@ -63,6 +63,15 @@ func main() {
 		if shouldDrop {
 			continue
 		}
-		log.Println(frame)
+		if frame.Type == wifistack.FrameTypeAssocRequest {
+			assoc, err := wifistack.DecodeAssocRequest(frame)
+			if err != nil {
+				log.Println("Invalid assoc request:", frame)
+			} else {
+				log.Println("AssocReq:", assoc)
+			}
+		} else {
+			log.Println(frame)
+		}
 	}
 }
