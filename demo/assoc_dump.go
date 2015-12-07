@@ -63,15 +63,27 @@ func main() {
 		if shouldDrop {
 			continue
 		}
-		if frame.Type == wifistack.FrameTypeAssocRequest {
+		switch frame.Type {
+		case wifistack.FrameTypeAssocRequest:
 			assoc, err := wifistack.DecodeAssocRequest(frame)
 			if err != nil {
-				log.Println("Invalid assoc request:", frame)
+				log.Println("Invalid Association Request:", frame)
 			} else {
-				log.Println("AssocReq:", assoc)
+				log.Println("Association Request:", assoc)
 			}
-		} else {
+		case wifistack.FrameTypeAssocResponse:
+			assoc, err := wifistack.DecodeAssocResponse(frame)
+			if err != nil {
+				log.Println("Invalid Association Response:", frame)
+			} else {
+				log.Println("Association Response:", assoc)
+			}
+		default:
 			log.Println(frame)
+		}
+		if frame.Type == wifistack.FrameTypeAssocRequest {
+		} else {
+
 		}
 	}
 }

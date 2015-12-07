@@ -25,7 +25,6 @@ func DecodeBeacon(f *Frame) (beacon *Beacon, err error) {
 
 	res.BSSID = f.MAC2
 
-	// TODO: figure out if these are really supposed to be little endian.
 	res.Timestamp = binary.LittleEndian.Uint64(f.Payload)
 	res.Interval = binary.LittleEndian.Uint16(f.Payload[8:])
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload[10:])
