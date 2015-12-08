@@ -79,8 +79,8 @@ func DecodeAssocResponse(f *Frame) (assocResponse *AssocResponse, err error) {
 
 	var res AssocResponse
 
-	res.BSSID = f.MAC1
-	res.Client = f.MAC3
+	res.Client = f.MAC1
+	res.BSSID = f.MAC2
 
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload)
 	res.StatusCode = binary.LittleEndian.Uint16(f.Payload[2:])

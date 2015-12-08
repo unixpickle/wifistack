@@ -13,19 +13,21 @@ import (
 // I got this value by analyzing traffic from my phone.
 const HandshakeDurationID = 15360
 
-// AuthenticateOpenNetwork performs the authentication handshake for an open network.
-func AuthenticateOpenNetwork(s Stream, bssid, client [6]byte, timeout time.Duration) error {
+// AuthenticateOpen performs the authentication handshake for an open network.
+func AuthenticateOpen(s Stream, bssid, client [6]byte, timeout time.Duration) error {
 	timeoutChan := time.After(timeout)
 
 	authPacket := frames.NewAuthenticationOpen(bssid, client)
 	authFrame := authPacket.EncodeToFrame()
 	authFrame.DurationID = HandshakeDurationID
+	authFrame.SequenceControl = 57422
 
 	s.Outgoing() <- authFrame.Encode()
 
 	for {
 		select {
 		case packet, ok := <-s.Incoming():
+			s.Outgoing() <- authFrame.Encode()
 			if !ok {
 				return s.FirstError()
 			}
@@ -36,6 +38,7 @@ func AuthenticateOpenNetwork(s Stream, bssid, client [6]byte, timeout time.Durat
 			if frame.Version != 0 || frame.Type != frames.FrameTypeAuthentication {
 				continue
 			}
+			
 			auth, err := frames.DecodeAuthentication(frame)
 			if err != nil {
 				continue
@@ -104,7 +107,7 @@ func Associate(s Stream, bssid, client [6]byte, ssid string, timeout time.Durati
 				return nil
 			} else {
 				codeStr := strconv.Itoa(int(resp.StatusCode))
-				return errors.New("association error: " + codeStr)
+				return errors.New("association error " + codeStr)
 			}
 		case <-timeoutChan:
 			return errors.New("association timed out")
