@@ -35,7 +35,7 @@ func main() {
 	packetTypes := []frames.FrameType{
 		frames.FrameTypeAssocRequest,
 		frames.FrameTypeAssocResponse,
-		frames.FrameTypeAuth,
+		frames.FrameTypeAuthentication,
 	}
 	for {
 		rawFrame, _, err := handle.Receive()
