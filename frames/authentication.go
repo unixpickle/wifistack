@@ -20,11 +20,11 @@ type Authentication struct {
 
 // NewAuthenticationOpen generates an initial authentication frame for an open network.
 // This is useful for every kind of network besides WEP networks.
-func NewAuthenticationOpen(router, client [6]byte) *Authentication {
+func NewAuthenticationOpen(bssid, client [6]byte) *Authentication {
 	return &Authentication{
-		MAC1:           router,
+		MAC1:           bssid,
 		MAC2:           client,
-		MAC3:           router,
+		MAC3:           bssid,
 		SequenceNumber: 1,
 		Elements:       ManagementElements{},
 	}
@@ -74,4 +74,10 @@ func (a *Authentication) EncodeToFrame() *Frame {
 		MAC3:    a.MAC3,
 		Payload: buf.Bytes(),
 	}
+}
+
+// Success returns true if the status code of the authentication frame
+// indicates a success.
+func (a *Authentication) Success() bool {
+	return a.StatusCode == 0
 }

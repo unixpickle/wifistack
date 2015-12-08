@@ -19,4 +19,10 @@ type Stream interface {
 	// Some types of Stream may not support channel hopping, in which case
 	// this will return an error.
 	SetChannel(i int) error
+
+	// FirstError returns the first read or write error that this Stream
+	// encountered.
+	// If the stream was closed without the stream's user explicitly
+	// closing it, this must return a non-nil value.
+	FirstError() error
 }

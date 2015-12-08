@@ -116,7 +116,7 @@ func (a *AssocResponse) EncodeToFrame() *Frame {
 	}
 }
 
-// Successful returns true if the association response indicates success.
-func (a *AssocResponse) Successful() bool {
+// Success returns true if the association response indicates success.
+func (a *AssocResponse) Success() bool {
 	return a.StatusCode == 0
 }
