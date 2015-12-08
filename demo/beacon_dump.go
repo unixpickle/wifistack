@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/unixpickle/gofi"
-	"github.com/unixpickle/wifistack"
+	"github.com/unixpickle/wifistack/frames"
 )
 
 func main() {
@@ -34,12 +34,12 @@ func main() {
 		if err != nil {
 			log.Fatalln("receive error:", err)
 		}
-		frame, err := wifistack.DecodeFrame(frameData)
+		frame, err := frames.DecodeFrame(frameData)
 		if err != nil {
 			continue
 		}
 		if frame.Beacon() {
-			beacon, err := wifistack.DecodeBeacon(frame)
+			beacon, err := frames.DecodeBeacon(frame)
 			if err != nil {
 				log.Println("got invalid beacon:", err)
 			} else {

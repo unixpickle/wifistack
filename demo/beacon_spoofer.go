@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/unixpickle/gofi"
-	"github.com/unixpickle/wifistack"
+	"github.com/unixpickle/wifistack/frames"
 )
 
 func main() {
@@ -21,14 +21,14 @@ func main() {
 
 	handle.SetChannel(11)
 
-	var beacon wifistack.Beacon
+	var beacon frames.Beacon
 	beacon.Capabilities = 1057
 	beacon.Interval = 25
 
 	copy(beacon.BSSID[1:], []byte("HELLO"))
-	beacon.Elements = wifistack.ManagementElements{
-		{wifistack.ManagementTagSSID, []byte("Spoofed Network")},
-		{wifistack.ManagementTagDSSSParameterSet, []byte{11}},
+	beacon.Elements = frames.ManagementElements{
+		{frames.ManagementTagSSID, []byte("Spoofed Network")},
+		{frames.ManagementTagDSSSParameterSet, []byte{11}},
 	}
 	frameData := beacon.EncodeToFrame().Encode()
 	for {

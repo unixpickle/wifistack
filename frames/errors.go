@@ -1,4 +1,4 @@
-package wifistack
+package frames
 
 import "errors"
 

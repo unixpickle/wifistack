@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/unixpickle/gofi"
-	"github.com/unixpickle/wifistack"
+	"github.com/unixpickle/wifistack/frames"
 )
 
 func main() {
@@ -32,17 +32,17 @@ func main() {
 		log.Fatalln("could not set channel:", err)
 	}
 
-	packetTypes := []wifistack.FrameType{
-		wifistack.FrameTypeAssocRequest,
-		wifistack.FrameTypeAssocResponse,
-		wifistack.FrameTypeAuth,
+	packetTypes := []frames.FrameType{
+		frames.FrameTypeAssocRequest,
+		frames.FrameTypeAssocResponse,
+		frames.FrameTypeAuth,
 	}
 	for {
 		rawFrame, _, err := handle.Receive()
 		if err != nil {
 			log.Fatalln("failed to receive:", err)
 		}
-		frame, err := wifistack.DecodeFrame(rawFrame)
+		frame, err := frames.DecodeFrame(rawFrame)
 		if err != nil {
 			continue
 		}
@@ -64,15 +64,15 @@ func main() {
 			continue
 		}
 		switch frame.Type {
-		case wifistack.FrameTypeAssocRequest:
-			assoc, err := wifistack.DecodeAssocRequest(frame)
+		case frames.FrameTypeAssocRequest:
+			assoc, err := frames.DecodeAssocRequest(frame)
 			if err != nil {
 				log.Println("Invalid Association Request:", frame)
 			} else {
 				log.Println("Association Request:", assoc)
 			}
-		case wifistack.FrameTypeAssocResponse:
-			assoc, err := wifistack.DecodeAssocResponse(frame)
+		case frames.FrameTypeAssocResponse:
+			assoc, err := frames.DecodeAssocResponse(frame)
 			if err != nil {
 				log.Println("Invalid Association Response:", frame)
 			} else {
@@ -81,7 +81,7 @@ func main() {
 		default:
 			log.Println(frame)
 		}
-		if frame.Type == wifistack.FrameTypeAssocRequest {
+		if frame.Type == frames.FrameTypeAssocRequest {
 		} else {
 
 		}
