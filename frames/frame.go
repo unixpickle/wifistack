@@ -80,16 +80,16 @@ type Frame struct {
 
 	DurationID uint16
 
-	MAC1 [6]byte
-	MAC2 [6]byte
-	MAC3 [6]byte
+	MAC1 MAC
+	MAC2 MAC
+	MAC3 MAC
 
 	SequenceControl uint16
 
 	// MAC4 is the fourth MAC address which is not present in every
 	// 802.11 MAC frame.
 	// If this is nil, then it is not present.
-	MAC4 []byte
+	MAC4 *MAC
 
 	Payload []byte
 }
@@ -172,7 +172,7 @@ func (f *Frame) Encode() []byte {
 	buf.Write(numBuf)
 
 	if f.MAC4 != nil {
-		buf.Write(f.MAC4)
+		buf.Write((*f.MAC4)[:])
 	}
 
 	buf.Write(f.Payload)
@@ -205,12 +205,11 @@ func (f *Frame) String() string {
 	}
 
 	description.WriteRune(' ')
-	description.WriteString(macToString(f.MAC3))
+	description.WriteString(f.MAC1.String())
 	description.WriteString(",")
-	description.WriteString(macToString(f.MAC2))
+	description.WriteString(f.MAC2.String())
 	description.WriteString(",")
-	description.WriteString(macToString(f.MAC1))
-
+	description.WriteString(f.MAC3.String())
 	description.WriteRune(' ')
 	description.WriteString(strconv.Itoa(int(f.DurationID)))
 	description.WriteRune(' ')
@@ -243,15 +242,4 @@ func byteToHex(n byte) string {
 		res += string('a' + (n2 - 10))
 	}
 	return res
-}
-
-func macToString(m [6]byte) string {
-	var buf bytes.Buffer
-	for i := 0; i < 6; i++ {
-		if i != 0 {
-			buf.WriteRune(':')
-		}
-		buf.WriteString(byteToHex(m[i]))
-	}
-	return buf.String()
 }

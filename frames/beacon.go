@@ -7,7 +7,7 @@ import (
 
 // A Beacon stores information specific to wireless beacons.
 type Beacon struct {
-	BSSID [6]byte
+	BSSID MAC
 
 	Timestamp    uint64
 	Interval     uint16
@@ -70,7 +70,7 @@ func (f *Beacon) EncodeToFrame() *Frame {
 	return &Frame{
 		Version: 0,
 		Type:    FrameTypeBeacon,
-		MAC1:    [6]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		MAC1:    MAC{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		MAC2:    f.BSSID,
 		MAC3:    f.BSSID,
 		Payload: buf.Bytes(),

@@ -7,9 +7,9 @@ import (
 
 // Authentication frames are used at the beginning of a new client-router connection.
 type Authentication struct {
-	MAC1 [6]byte
-	MAC2 [6]byte
-	MAC3 [6]byte
+	MAC1 MAC
+	MAC2 MAC
+	MAC3 MAC
 
 	Algorithm      uint16
 	SequenceNumber uint16
@@ -20,7 +20,7 @@ type Authentication struct {
 
 // NewAuthenticationOpen generates an initial authentication frame for an open network.
 // This is useful for every kind of network besides WEP networks.
-func NewAuthenticationOpen(bssid, client [6]byte) *Authentication {
+func NewAuthenticationOpen(bssid, client MAC) *Authentication {
 	return &Authentication{
 		MAC1:           bssid,
 		MAC2:           client,

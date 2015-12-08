@@ -7,8 +7,8 @@ import (
 
 // An AssocRequest stores holds information about an association request frame.
 type AssocRequest struct {
-	BSSID  [6]byte
-	Client [6]byte
+	BSSID  MAC
+	Client MAC
 
 	Capabilities uint16
 	Interval     uint16
@@ -61,8 +61,8 @@ func (a *AssocRequest) EncodeToFrame() *Frame {
 
 // An AssocResponse holds information about an association response frame.
 type AssocResponse struct {
-	BSSID  [6]byte
-	Client [6]byte
+	BSSID  MAC
+	Client MAC
 
 	Capabilities  uint16
 	StatusCode    uint16
