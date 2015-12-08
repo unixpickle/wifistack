@@ -40,7 +40,7 @@ func AuthenticateOpenNetwork(s Stream, bssid, client [6]byte, timeout time.Durat
 			if err != nil {
 				continue
 			}
-			if auth.MAC1 != bssid || auth.MAC2 != bssid || auth.MAC3 != client {
+			if auth.MAC1 != client || auth.MAC2 != bssid || auth.MAC3 != bssid {
 				continue
 			}
 			if auth.Success() {

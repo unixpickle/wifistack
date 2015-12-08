@@ -109,9 +109,9 @@ func (a *AssocResponse) EncodeToFrame() *Frame {
 	return &Frame{
 		Version: 0,
 		Type:    FrameTypeAssocResponse,
-		MAC1:    a.BSSID,
+		MAC1:    a.Client,
 		MAC2:    a.BSSID,
-		MAC3:    a.Client,
+		MAC3:    a.BSSID,
 		Payload: buf.Bytes(),
 	}
 }
