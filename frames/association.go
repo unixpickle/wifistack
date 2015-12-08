@@ -50,12 +50,12 @@ func (a *AssocRequest) EncodeToFrame() *Frame {
 	buf.Write(a.Elements.Encode())
 
 	return &Frame{
-		Version:    0,
-		Type:       FrameTypeAssocRequest,
-		MAC1:       a.BSSID,
-		MAC2:       a.Client,
-		MAC3:       a.BSSID,
-		Payload:    buf.Bytes(),
+		Version: 0,
+		Type:    FrameTypeAssocRequest,
+		MAC1:    a.BSSID,
+		MAC2:    a.Client,
+		MAC3:    a.BSSID,
+		Payload: buf.Bytes(),
 	}
 }
 
@@ -107,12 +107,12 @@ func (a *AssocResponse) EncodeToFrame() *Frame {
 	buf.Write(a.Elements.Encode())
 
 	return &Frame{
-		Version:    0,
-		Type:       FrameTypeAssocResponse,
-		MAC1:       a.BSSID,
-		MAC2:       a.BSSID,
-		MAC3:       a.Client,
-		Payload:    buf.Bytes(),
+		Version: 0,
+		Type:    FrameTypeAssocResponse,
+		MAC1:    a.BSSID,
+		MAC2:    a.BSSID,
+		MAC3:    a.Client,
+		Payload: buf.Bytes(),
 	}
 }
 

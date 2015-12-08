@@ -38,31 +38,31 @@ func (f FrameType) String() string {
 }
 
 const (
-	FrameTypeAssocRequest    FrameType = 0
-	FrameTypeAssocResponse             = 1
-	FrameTypeReassocRequest            = 2
-	FrameTypeReassocResponse           = 3
-	FrameTypeProbeRequest              = 4
-	FrameTypeProbeResponse             = 5
-	FrameTypeBeacon                    = 8
-	FrameTypeATIM                      = 9
-	FrameTypeDisassoc                  = 0xa
-	FrameTypeAuth                      = 0xb
-	FrameTypeDeauth                    = 0xc
+	FrameTypeAssocRequest     FrameType = 0
+	FrameTypeAssocResponse              = 1
+	FrameTypeReassocRequest             = 2
+	FrameTypeReassocResponse            = 3
+	FrameTypeProbeRequest               = 4
+	FrameTypeProbeResponse              = 5
+	FrameTypeBeacon                     = 8
+	FrameTypeATIM                       = 9
+	FrameTypeDisassoc                   = 0xa
+	FrameTypeAuthentication             = 0xb
+	FrameTypeDeauthentication           = 0xc
 )
 
 var frameTypeNames map[FrameType]string = map[FrameType]string{
-	FrameTypeAssocRequest:    "Association Request",
-	FrameTypeAssocResponse:   "Association Response",
-	FrameTypeReassocRequest:  "Reassociation Request",
-	FrameTypeReassocResponse: "Reassociation Response",
-	FrameTypeProbeRequest:    "Probe Request",
-	FrameTypeProbeResponse:   "Probe Response",
-	FrameTypeBeacon:          "Beacon",
-	FrameTypeATIM:            "Announcement Traffic Indication Message",
-	FrameTypeDisassoc:        "Disassociation",
-	FrameTypeAuth:            "Authentication",
-	FrameTypeDeauth:          "Deauthentication",
+	FrameTypeAssocRequest:     "Association Request",
+	FrameTypeAssocResponse:    "Association Response",
+	FrameTypeReassocRequest:   "Reassociation Request",
+	FrameTypeReassocResponse:  "Reassociation Response",
+	FrameTypeProbeRequest:     "Probe Request",
+	FrameTypeProbeResponse:    "Probe Response",
+	FrameTypeBeacon:           "Beacon",
+	FrameTypeATIM:             "Announcement Traffic Indication Message",
+	FrameTypeDisassoc:         "Disassociation",
+	FrameTypeAuthentication:   "Authentication",
+	FrameTypeDeauthentication: "Deauthentication",
 }
 
 // A Frame is the fundamental unit used for communication on WiFi networks.
