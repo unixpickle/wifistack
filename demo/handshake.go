@@ -11,7 +11,7 @@ import (
 	"github.com/unixpickle/wifistack/frames"
 )
 
-const Timeout = time.Second*5
+const Timeout = time.Second * 5
 
 func main() {
 	if len(os.Args) != 5 {

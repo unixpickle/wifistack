@@ -55,6 +55,41 @@ func (f *Beacon) Channel() int {
 	return int(channel[0])
 }
 
+// BSSDescription generates a BSSDescription based on the information from
+// this beacon.
+func (f *Beacon) BSSDescription() BSSDescription {
+	res := BSSDescription{
+		BSSID: f.BSSID,
+		SSID:  f.SSID(),
+	}
+
+	// TODO: figure out the best way to determine the type.
+	// See section 8.4.1.4 of the IEEE 802.11-2012 spec.
+	if (f.Capabilities & 2) != 0 {
+		res.Type = BSSTypeInfrastructure
+	} else if (f.Capabilities & 3) == 0 {
+		res.Type = BSSTypeMesh
+	}
+
+	res.BasicRates = []byte{}
+	res.OperationalRates = []byte{}
+
+	for _, rate := range f.Elements.Get(ManagementTagSupportedRates) {
+		if (rate & 0x80) != 0 {
+			res.BasicRates = append(res.BasicRates, rate&0x7f)
+		}
+		res.OperationalRates = append(res.OperationalRates, rate&0x7f)
+	}
+	for _, rate := range f.Elements.Get(ManagementTagExtendedSupportedRates) {
+		if (rate & 0x80) != 0 {
+			res.BasicRates = append(res.BasicRates, rate&0x7f)
+		}
+		res.OperationalRates = append(res.OperationalRates, rate&0x7f)
+	}
+
+	return res
+}
+
 // EncodeToFrame generates an 802.11 frame which represents this beacon.
 func (f *Beacon) EncodeToFrame() *Frame {
 	var buf bytes.Buffer

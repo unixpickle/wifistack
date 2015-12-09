@@ -38,7 +38,7 @@ func AuthenticateOpen(s Stream, bssid, client [6]byte, timeout time.Duration) er
 			if frame.Version != 0 || frame.Type != frames.FrameTypeAuthentication {
 				continue
 			}
-			
+
 			auth, err := frames.DecodeAuthentication(frame)
 			if err != nil {
 				continue
