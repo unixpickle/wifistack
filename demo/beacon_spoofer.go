@@ -19,7 +19,7 @@ func main() {
 	}
 	defer handle.Close()
 
-	handle.SetChannel(11)
+	handle.SetChannel(gofi.Channel{Number: 11})
 
 	var beacon frames.Beacon
 	beacon.Capabilities = 1057

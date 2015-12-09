@@ -59,13 +59,18 @@ func (s *RawStream) Outgoing() chan<- gofi.Frame {
 	return s.outgoing
 }
 
-// SetChannel sets the wireless channel of the underlying handle.
-func (s *RawStream) SetChannel(i int) error {
-	return s.handle.SetChannel(i)
+// SupportedChannels returns the supported channels of the underlying handle.
+func (s *RawStream) SupportedChannels() []gofi.Channel {
+	return s.handle.SupportedChannels()
 }
 
-// Channel returns the wireless channel of the underlying handle.
-func (s *RawStream) Channel() int {
+// SetChannel sets the WLAN channel of the underlying handle.
+func (s *RawStream) SetChannel(c gofi.Channel) error {
+	return s.handle.SetChannel(c)
+}
+
+// Channel returns the WLAN channel of the underlying handle.
+func (s *RawStream) Channel() gofi.Channel {
 	return s.handle.Channel()
 }
 

@@ -42,7 +42,7 @@ func main() {
 	}
 	defer handle.Close()
 
-	handle.SetChannel(channel)
+	handle.SetChannel(gofi.Channel{Number: channel})
 
 	stream := wifistack.NewRawStream(handle)
 	if err := wifistack.AuthenticateOpen(stream, bssidMAC, clientMAC, Timeout); err != nil {

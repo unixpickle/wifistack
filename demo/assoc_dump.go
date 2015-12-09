@@ -28,7 +28,7 @@ func main() {
 		log.Fatalln("could not open handle:", err)
 	}
 
-	if err := handle.SetChannel(channel); err != nil {
+	if err := handle.SetChannel(gofi.Channel{Number: channel}); err != nil {
 		log.Fatalln("could not set channel:", err)
 	}
 

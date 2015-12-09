@@ -12,13 +12,17 @@ type Stream interface {
 	// You can close() this channel to close the stream.
 	Outgoing() chan<- gofi.Frame
 
-	// Channel returns the wireless channel to which the stream is tuned.
-	Channel() int
+	// SupportedChannels returns a list of all supported WLAN channels
+	// in no particular order.
+	SupportedChannels() []gofi.Channel
 
-	// SetChannel modifies the wireless channel to which the stream is tuned.
+	// Channel returns the WLAN channel to which the stream is tuned.
+	Channel() gofi.Channel
+
+	// SetChannel tunes the stream into a WLAN channel.
 	// Some types of Stream may not support channel hopping, in which case
 	// this will return an error.
-	SetChannel(i int) error
+	SetChannel(c gofi.Channel) error
 
 	// FirstError returns the first read or write error that this Stream
 	// encountered.

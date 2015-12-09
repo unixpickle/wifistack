@@ -21,9 +21,10 @@ func main() {
 
 	// Constantly hop between channels.
 	go func() {
+		supportedChannels := handle.SupportedChannels()
 		for {
-			for i := 1; i < 14; i++ {
-				handle.SetChannel(i)
+			for _, ch := range supportedChannels {
+				handle.SetChannel(ch)
 				time.Sleep(time.Second / 10)
 			}
 		}
