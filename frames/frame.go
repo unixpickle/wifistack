@@ -38,17 +38,62 @@ func (f FrameType) String() string {
 }
 
 const (
-	FrameTypeAssocRequest     FrameType = 0
-	FrameTypeAssocResponse              = 1
-	FrameTypeReassocRequest             = 2
-	FrameTypeReassocResponse            = 3
-	FrameTypeProbeRequest               = 4
-	FrameTypeProbeResponse              = 5
-	FrameTypeBeacon                     = 8
-	FrameTypeATIM                       = 9
-	FrameTypeDisassoc                   = 0xa
-	FrameTypeAuthentication             = 0xb
-	FrameTypeDeauthentication           = 0xc
+	FrameMajorTypeManagement = 0
+	FrameMajorTypeControl    = 1
+	FrameMajorTypeData       = 2
+)
+
+// These are the types of management frames defined in the
+// IEEE 802.11 specification from 2012, page 382.
+const (
+	FrameTypeAssocRequest        FrameType = 0
+	FrameTypeAssocResponse                 = 1
+	FrameTypeReassocRequest                = 2
+	FrameTypeReassocResponse               = 3
+	FrameTypeProbeRequest                  = 4
+	FrameTypeProbeResponse                 = 5
+	FrameTypeTimingAdvertisement           = 6
+	FrameTypeBeacon                        = 8
+	FrameTypeATIM                          = 9
+	FrameTypeDisassoc                      = 0xa
+	FrameTypeAuthentication                = 0xb
+	FrameTypeDeauthentication              = 0xc
+	FrameTypeAction                        = 0xd
+	FrameTypeActionNoAck                   = 0xe
+)
+
+// These are the types of control frames defined in the
+// IEEE 802.11 specification from 2012, page 383.
+const (
+	FrameTypeControlWrapper  = 0x17
+	FrameTypeBlockAckRequest = 0x18
+	FrameTypeBlockAck        = 0x19
+	FrameTypePSPoll          = 0x1a
+	FrameTypeRTS             = 0x1b
+	FrameTypeCTS             = 0x1c
+	FrameTypeACK             = 0x1d
+	FrameTypeCFEnd           = 0x1e
+	FrameTypeCFEndCFAck      = 0x1f
+)
+
+// These are the types of data frames defined in the
+// IEEE 802.11 specification from 2012, page 383.
+const (
+	FrameTypeData               = 0x20
+	FrameTypeDataCFAck          = 0x21
+	FrameTypeDataCFPoll         = 0x22
+	FrameTypeDataCFAckCFPoll    = 0x23
+	FrameTypeNull               = 0x24
+	FrameTypeNullCFAck          = 0x25
+	FrameTypeNullCFPoll         = 0x26
+	FrameTypeNullCFAckCFPoll    = 0x27
+	FrameTypeQoSData            = 0x28
+	FrameTypeQoSDataCFAck       = 0x29
+	FrameTypeQoSDataCFPoll      = 0x2a
+	FrameTypeQoSDataCFAckCFPoll = 0x2b
+	FrameTypeQoSNull            = 0x2c
+	FrameTypeQoSNullCFPoll      = 0x2e
+	FrameTypeQoSNullCFAckCFPoll = 0x2f
 )
 
 var frameTypeNames map[FrameType]string = map[FrameType]string{
@@ -63,6 +108,34 @@ var frameTypeNames map[FrameType]string = map[FrameType]string{
 	FrameTypeDisassoc:         "Disassociation",
 	FrameTypeAuthentication:   "Authentication",
 	FrameTypeDeauthentication: "Deauthentication",
+	FrameTypeAction:           "Action",
+	FrameTypeActionNoAck:      "Action (No Ack)",
+
+	FrameTypeControlWrapper:  "Control Wrapper",
+	FrameTypeBlockAckRequest: "Block Ack Request",
+	FrameTypeBlockAck:        "Block Ack",
+	FrameTypePSPoll:          "PS-Poll",
+	FrameTypeRTS:             "Request to Send",
+	FrameTypeCTS:             "Clear to Send",
+	FrameTypeACK:             "Acknowledgement",
+	FrameTypeCFEnd:           "CF-End",
+	FrameTypeCFEndCFAck:      "CF-End + CF-Ack",
+
+	FrameTypeData:               "Data",
+	FrameTypeDataCFAck:          "Data + CF-Ack",
+	FrameTypeDataCFPoll:         "Data + CF-Poll",
+	FrameTypeDataCFAckCFPoll:    "Data + CF-Ack + CF-Poll",
+	FrameTypeNull:               "Null",
+	FrameTypeNullCFAck:          "Null + CF-Ack",
+	FrameTypeNullCFPoll:         "Null + CF-Poll",
+	FrameTypeNullCFAckCFPoll:    "Null + CF-Ack + CF-Poll",
+	FrameTypeQoSData:            "QoS Data",
+	FrameTypeQoSDataCFAck:       "Qos Data + CF-Ack",
+	FrameTypeQoSDataCFPoll:      "Qos Data + CF-Poll",
+	FrameTypeQoSDataCFAckCFPoll: "Qos Data + CF-Ack + CF-Poll",
+	FrameTypeQoSNull:            "Qos Null",
+	FrameTypeQoSNullCFPoll:      "Qos Null + CF-Poll",
+	FrameTypeQoSNullCFAckCFPoll: "Qos Null + CF-Ack + CF-Poll",
 }
 
 // A Frame is the fundamental unit used for communication on WiFi networks.
