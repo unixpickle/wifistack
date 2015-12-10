@@ -59,8 +59,9 @@ func (f *Beacon) Channel() int {
 // this beacon.
 func (f *Beacon) BSSDescription() BSSDescription {
 	res := BSSDescription{
-		BSSID: f.BSSID,
-		SSID:  f.SSID(),
+		BSSID:   f.BSSID,
+		SSID:    f.SSID(),
+		Channel: f.Channel(),
 	}
 
 	// TODO: figure out the best way to determine the type.

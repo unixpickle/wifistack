@@ -16,4 +16,6 @@ type BSSDescription struct {
 
 	BasicRates       []byte
 	OperationalRates []byte
+	
+	Channel int
 }

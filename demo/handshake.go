@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -14,24 +15,6 @@ import (
 const Timeout = time.Second * 5
 
 func main() {
-	if len(os.Args) != 5 {
-		log.Fatalln("Usage: <client MAC> <BSSID MAC> <SSID> <channel>")
-	}
-
-	clientMAC, err := frames.ParseMAC(os.Args[1])
-	if err != nil {
-		log.Fatalln("invalid client MAC:", err)
-	}
-	bssidMAC, err := frames.ParseMAC(os.Args[2])
-	if err != nil {
-		log.Fatalln("invalid client MAC:", err)
-	}
-	ssid := os.Args[3]
-	channel, err := strconv.Atoi(os.Args[4])
-	if err != nil {
-		log.Fatalln("invalid channel:", err)
-	}
-
 	interfaceName, err := gofi.DefaultInterfaceName()
 	if err != nil {
 		log.Fatalln("no default interface:", err)
@@ -42,15 +25,53 @@ func main() {
 	}
 	defer handle.Close()
 
-	handle.SetChannel(gofi.Channel{Number: channel})
+	fmt.Println("BSS Descriptions:")
 
 	stream := wifistack.NewRawStream(handle)
-	if err := wifistack.AuthenticateOpen(stream, bssidMAC, clientMAC, Timeout); err != nil {
-		log.Fatalln("could not authenticate:", err)
+	scanRes, _ := wifistack.ScanNetworks(stream)
+	descriptions := []frames.BSSDescription{}
+	for desc := range scanRes {
+		fmt.Println(len(descriptions), "-", desc.BSSID, desc.SSID)
+		descriptions = append(descriptions, desc)
 	}
-	log.Println("authenticated!")
-	if err := wifistack.Associate(stream, bssidMAC, clientMAC, ssid, Timeout); err != nil {
-		log.Fatalln("could not associate:", err)
+
+	fmt.Print("Pick a number from the list: ")
+	choice := readChoice()
+	if choice < 0 || choice >= len(descriptions) {
+		log.Fatalln("choice out of bounds.")
 	}
-	log.Println("associated!")
+
+	handshaker := wifistack.Handshaker{
+		Stream: stream,
+		Client: frames.MAC{0, 1, 2, 3, 4, 5},
+		BSS:    descriptions[choice],
+	}
+	if err := handshaker.HandshakeOpen(time.Second*5); err != nil {
+		log.Fatalln("handshake failed:", err)
+	} else {
+		log.Println("handshake successful!")
+	}
+}
+
+func readChoice() int {
+	s := ""
+	for {
+		b := make([]byte, 1)
+		if _, err := os.Stdin.Read(b); err != nil {
+			log.Fatalln(err)
+		}
+		if b[0] == '\n' {
+			break
+		} else if b[0] == '\r' {
+			continue
+		} else {
+			s += string(b)
+		}
+	}
+
+	num, err := strconv.Atoi(s)
+	if err != nil {
+		log.Fatalln("invalid number:", s)
+	}
+	return num
 }

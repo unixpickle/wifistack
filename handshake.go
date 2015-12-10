@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/unixpickle/gofi"
 	"github.com/unixpickle/wifistack/frames"
 )
 
@@ -13,23 +14,53 @@ import (
 // I got this value by analyzing traffic from my phone.
 const HandshakeDurationID = 15360
 
-// AuthenticateOpen performs the authentication handshake for an open network.
-func AuthenticateOpen(s Stream, bssid, client [6]byte, timeout time.Duration) error {
+var ErrHandshakeTimeout = errors.New("handshake timed out")
+
+type Handshaker struct {
+	Stream Stream
+	Client frames.MAC
+	BSS    frames.BSSDescription
+}
+
+// HandshakeOpen performs the handshake for an open network.
+func (h *Handshaker) HandshakeOpen(timeout time.Duration) error {
 	timeoutChan := time.After(timeout)
 
-	authPacket := frames.NewAuthenticationOpen(bssid, client)
+	bssChannel := gofi.Channel{Number: h.BSS.Channel}
+	if err := h.Stream.SetChannel(bssChannel); err != nil {
+		return err
+	}
+
+	if err := h.authenticateOpen(timeoutChan); err != nil {
+		return err
+	}
+
+	return h.associate(timeoutChan)
+}
+
+// authenticateOpen performs the authentication handshake for an open (or WPA) network.
+func (h *Handshaker) authenticateOpen(timeout <-chan time.Time) error {
+	authPacket := frames.NewAuthenticationOpen(h.BSS.BSSID, h.Client)
 	authFrame := authPacket.EncodeToFrame()
 	authFrame.DurationID = HandshakeDurationID
-	authFrame.SequenceControl = 57422
 
-	s.Outgoing() <- authFrame.Encode()
+	h.Stream.Outgoing() <- authFrame.Encode()
 
 	for {
+		// NOTE: this guarantees that we will never read more than one packet
+		// after the timeout expires.
 		select {
-		case packet, ok := <-s.Incoming():
-			s.Outgoing() <- authFrame.Encode()
+		case <-timeout:
+			return ErrHandshakeTimeout
+		default:
+		}
+
+		select {
+		case <-timeout:
+			return ErrHandshakeTimeout
+		case packet, ok := <-h.Stream.Incoming():
 			if !ok {
-				return s.FirstError()
+				return h.Stream.FirstError()
 			}
 			frame, err := frames.DecodeFrame(packet.Frame)
 			if err != nil {
@@ -43,7 +74,8 @@ func AuthenticateOpen(s Stream, bssid, client [6]byte, timeout time.Duration) er
 			if err != nil {
 				continue
 			}
-			if auth.MAC1 != client || auth.MAC2 != bssid || auth.MAC3 != bssid {
+			if auth.MAC1 != h.Client || auth.MAC2 != h.BSS.BSSID ||
+				auth.MAC3 != h.BSS.BSSID {
 				continue
 			}
 			if auth.Success() {
@@ -52,26 +84,22 @@ func AuthenticateOpen(s Stream, bssid, client [6]byte, timeout time.Duration) er
 				codeStr := strconv.Itoa(int(auth.StatusCode))
 				return errors.New("authentication error: " + codeStr)
 			}
-		case <-timeoutChan:
-			return errors.New("authentication timed out")
 		}
 	}
 }
 
-// Associate performs the association handshake for a network.
-// You may only associate with a network once you are authenticated with it.
-func Associate(s Stream, bssid, client [6]byte, ssid string, timeout time.Duration) error {
-	timeoutChan := time.After(timeout)
-
+// associate performs the association handshake for a network.
+func (h *Handshaker) associate(timeout <-chan time.Time) error {
 	assocReq := &frames.AssocRequest{
-		BSSID:  bssid,
-		Client: client,
+		BSSID:  h.BSS.BSSID,
+		Client: h.Client,
 
 		// NOTE: this is the interval my phone used.
 		Interval: 3,
 
 		Elements: frames.ManagementElements{
-			{frames.ManagementTagSSID, []byte(ssid)},
+			{frames.ManagementTagSSID, []byte(h.BSS.SSID)},
+			{frames.ManagementTagSupportedRates, h.BSS.BasicRates},
 		},
 	}
 
@@ -81,13 +109,22 @@ func Associate(s Stream, bssid, client [6]byte, ssid string, timeout time.Durati
 	// The fragment number from the last packet was 0, so this one should be 1.
 	assocReqFrame.SequenceControl = (1 << 12)
 
-	s.Outgoing() <- assocReqFrame.Encode()
+	h.Stream.Outgoing() <- assocReqFrame.Encode()
 
 	for {
+		// NOTE: see the comment in authenticateOpen() to see why we need an extra select{}.
 		select {
-		case packet, ok := <-s.Incoming():
+		case <-timeout:
+			return ErrHandshakeTimeout
+		default:
+		}
+
+		select {
+		case <-timeout:
+			return ErrHandshakeTimeout
+		case packet, ok := <-h.Stream.Incoming():
 			if !ok {
-				return s.FirstError()
+				return h.Stream.FirstError()
 			}
 			frame, err := frames.DecodeFrame(packet.Frame)
 			if err != nil {
@@ -100,7 +137,7 @@ func Associate(s Stream, bssid, client [6]byte, ssid string, timeout time.Durati
 			if err != nil {
 				continue
 			}
-			if resp.BSSID != bssid || resp.Client != client {
+			if resp.BSSID != h.BSS.BSSID || resp.Client != h.Client {
 				continue
 			}
 			if resp.Success() {
@@ -109,8 +146,6 @@ func Associate(s Stream, bssid, client [6]byte, ssid string, timeout time.Durati
 				codeStr := strconv.Itoa(int(resp.StatusCode))
 				return errors.New("association error " + codeStr)
 			}
-		case <-timeoutChan:
-			return errors.New("association timed out")
 		}
 	}
 }
