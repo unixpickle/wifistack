@@ -12,7 +12,7 @@ import (
 // HandshakeDurationID is used as the 802.11 frame DurationID for all the association
 // and authentication frames.
 // I got this value by analyzing traffic from my phone.
-const HandshakeDurationID = 15360
+const HandshakeDurationID = 60
 
 var ErrHandshakeTimeout = errors.New("handshake timed out")
 
@@ -74,8 +74,8 @@ func (h *Handshaker) authenticateOpen(timeout <-chan time.Time) error {
 			if err != nil {
 				continue
 			}
-			if auth.MAC1 != h.Client || auth.MAC2 != h.BSS.BSSID ||
-				auth.MAC3 != h.BSS.BSSID {
+			if auth.Addresses[0] != h.Client || auth.Addresses[1] != h.BSS.BSSID ||
+				auth.Addresses[2] != h.BSS.BSSID {
 				continue
 			}
 			if auth.Success() {
@@ -107,7 +107,8 @@ func (h *Handshaker) associate(timeout <-chan time.Time) error {
 	assocReqFrame.DurationID = HandshakeDurationID
 
 	// The fragment number from the last packet was 0, so this one should be 1.
-	assocReqFrame.SequenceControl = (1 << 12)
+	seqControl := uint16(1 << 12)
+	assocReqFrame.SequenceControl = &seqControl
 
 	h.Stream.Outgoing() <- assocReqFrame.Encode()
 

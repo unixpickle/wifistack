@@ -46,7 +46,7 @@ func main() {
 		Client: frames.MAC{0, 1, 2, 3, 4, 5},
 		BSS:    descriptions[choice],
 	}
-	if err := handshaker.HandshakeOpen(time.Second*5); err != nil {
+	if err := handshaker.HandshakeOpen(time.Second * 5); err != nil {
 		log.Fatalln("handshake failed:", err)
 	} else {
 		log.Println("handshake successful!")

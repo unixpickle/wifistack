@@ -6,7 +6,7 @@ import (
 	"github.com/unixpickle/wifistack/frames"
 )
 
-const scanChannelTime = time.Second/5
+const scanChannelTime = time.Second / 5
 
 // ScanNetworks asynchronously scans for wireless networks.
 //

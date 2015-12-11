@@ -24,8 +24,8 @@ func DecodeAssocRequest(f *Frame) (assocRequest *AssocRequest, err error) {
 
 	var res AssocRequest
 
-	res.BSSID = f.MAC1
-	res.Client = f.MAC2
+	res.BSSID = f.Addresses[0]
+	res.Client = f.Addresses[1]
 
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload)
 	res.Interval = binary.LittleEndian.Uint16(f.Payload[2:])
@@ -49,13 +49,13 @@ func (a *AssocRequest) EncodeToFrame() *Frame {
 	buf.Write(header)
 	buf.Write(a.Elements.Encode())
 
+	var seqControl uint16
 	return &Frame{
-		Version: 0,
-		Type:    FrameTypeAssocRequest,
-		MAC1:    a.BSSID,
-		MAC2:    a.Client,
-		MAC3:    a.BSSID,
-		Payload: buf.Bytes(),
+		Version:         0,
+		Type:            FrameTypeAssocRequest,
+		SequenceControl: &seqControl,
+		Addresses:       []MAC{a.BSSID, a.Client, a.BSSID},
+		Payload:         buf.Bytes(),
 	}
 }
 
@@ -79,8 +79,8 @@ func DecodeAssocResponse(f *Frame) (assocResponse *AssocResponse, err error) {
 
 	var res AssocResponse
 
-	res.Client = f.MAC1
-	res.BSSID = f.MAC2
+	res.Client = f.Addresses[0]
+	res.BSSID = f.Addresses[1]
 
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload)
 	res.StatusCode = binary.LittleEndian.Uint16(f.Payload[2:])
@@ -106,13 +106,13 @@ func (a *AssocResponse) EncodeToFrame() *Frame {
 	buf.Write(header)
 	buf.Write(a.Elements.Encode())
 
+	var seqControl uint16
 	return &Frame{
-		Version: 0,
-		Type:    FrameTypeAssocResponse,
-		MAC1:    a.Client,
-		MAC2:    a.BSSID,
-		MAC3:    a.BSSID,
-		Payload: buf.Bytes(),
+		Version:         0,
+		Type:            FrameTypeAssocResponse,
+		SequenceControl: &seqControl,
+		Addresses:       []MAC{a.Client, a.BSSID, a.BSSID},
+		Payload:         buf.Bytes(),
 	}
 }
 

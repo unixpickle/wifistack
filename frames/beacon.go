@@ -23,7 +23,7 @@ func DecodeBeacon(f *Frame) (beacon *Beacon, err error) {
 	}
 	var res Beacon
 
-	res.BSSID = f.MAC2
+	res.BSSID = f.Addresses[1]
 
 	res.Timestamp = binary.LittleEndian.Uint64(f.Payload)
 	res.Interval = binary.LittleEndian.Uint16(f.Payload[8:])
@@ -103,12 +103,16 @@ func (f *Beacon) EncodeToFrame() *Frame {
 	buf.Write(header)
 	buf.Write(f.Elements.Encode())
 
+	var seqControl uint16
 	return &Frame{
-		Version: 0,
-		Type:    FrameTypeBeacon,
-		MAC1:    MAC{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		MAC2:    f.BSSID,
-		MAC3:    f.BSSID,
+		Version:         0,
+		Type:            FrameTypeBeacon,
+		SequenceControl: &seqControl,
+		Addresses: []MAC{
+			MAC{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+			f.BSSID,
+			f.BSSID,
+		},
 		Payload: buf.Bytes(),
 	}
 }

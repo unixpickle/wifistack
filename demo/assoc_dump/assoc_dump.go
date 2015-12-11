@@ -49,7 +49,7 @@ func main() {
 
 		// NOTE: on my WLAN, I occasionally receive almost completely 0'd packets
 		// with a *correct* checksum. It is baffling.
-		if frame.MAC1 == (frames.MAC{}) {
+		if frame.Addresses[0] == (frames.MAC{}) {
 			continue
 		}
 

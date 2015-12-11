@@ -3,6 +3,7 @@ package frames
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"hash/crc32"
 	"strconv"
 )
@@ -35,6 +36,13 @@ func (f FrameType) String() string {
 	} else {
 		return "FrameType(" + strconv.Itoa(int(f)) + ")"
 	}
+}
+
+// Unknown returns false if this frame type is defined in the 2012
+// IEEE 802.11 specification.
+func (f FrameType) Unknown() bool {
+	_, ok := frameTypeNames[f]
+	return !ok
 }
 
 const (
@@ -151,27 +159,39 @@ type Frame struct {
 	Encrypted       bool
 	Order           bool
 
+	// DurationID is present in all frames, but its meaning varies across frames.
 	DurationID uint16
 
-	MAC1 MAC
-	MAC2 MAC
-	MAC3 MAC
+	// Addresses in an ordered list of MAC addresses from the frame header.
+	// The number of MAC addresses is determined by the packet's type and flags.
+	Addresses []MAC
 
-	SequenceControl uint16
+	// SquenceControl is present in management and data frames, but not in
+	// control frames (in which case it will be nil).
+	SequenceControl *uint16
 
-	// MAC4 is the fourth MAC address which is not present in every
-	// 802.11 MAC frame.
-	// If this is nil, then it is not present.
-	MAC4 *MAC
+	// CarriedFrameControl is used in control wrapper frames to store the
+	// frame control field of the carried frame.
+	// In all other frames, it is nil.
+	CarriedFrameControl *uint16
 
+	// QoSControl is a flag on QoS data frames.
+	// In all other frames, it is nil.
+	QoSControl *uint16
+
+	// HTControlField is used in some QoS data frames, management frames, and the control
+	// wrapper frame.
+	// In all other frames, it is nil.
+	HTControlField *uint32
+
+	// Payload is the body of the frame, not including the header or checksum.
 	Payload []byte
 }
 
 // DecodeFrame decodes a raw WiFi frame.
 // The data should include a 32-bit checksum.
 func DecodeFrame(data []byte) (*Frame, error) {
-	// TODO: some frames actually may be less than 28 bytes (I think).
-	if len(data) < 28 {
+	if len(data) < 8 {
 		return nil, ErrBufferUnderflow
 	}
 
@@ -181,12 +201,21 @@ func DecodeFrame(data []byte) (*Frame, error) {
 		return nil, ErrBadChecksum
 	}
 
-	res := Frame{}
+	var res Frame
+
 	res.Version = int(data[0]) & 3
+
+	if res.Version != 0 {
+		return nil, ErrUnknownFrameVersion
+	}
 
 	majorType := int(data[0]>>2) & 3
 	subtype := int(data[0]>>4) & 0xf
 	res.Type = NewFrameType(majorType, subtype)
+
+	if res.Type.Unknown() {
+		return nil, ErrUnknownFrameType
+	}
 
 	flags := []*bool{&res.FromDS, &res.ToDS, &res.MoreFrag, &res.Retry, &res.PowerManagement,
 		&res.MoreData, &res.Encrypted, &res.Order}
@@ -196,17 +225,14 @@ func DecodeFrame(data []byte) (*Frame, error) {
 		}
 	}
 
-	res.DurationID = binary.BigEndian.Uint16(data[2:])
+	res.DurationID = binary.LittleEndian.Uint16(data[2:])
 
-	copy(res.MAC1[:], data[4:])
-	copy(res.MAC2[:], data[10:])
-	copy(res.MAC3[:], data[16:])
+	headerSize, err := res.decodeHeaderFields(data[4 : len(data)-4])
+	if err != nil {
+		return nil, err
+	}
 
-	res.SequenceControl = binary.BigEndian.Uint16(data[22:])
-
-	// TODO: figure out if the packet has an extra MAC field.
-
-	res.Payload = data[24 : len(data)-4]
+	res.Payload = data[4+headerSize : len(data)-4]
 
 	return &res, nil
 }
@@ -237,15 +263,33 @@ func (f *Frame) Encode() []byte {
 	binary.BigEndian.PutUint16(numBuf, f.DurationID)
 	buf.Write(numBuf)
 
-	buf.Write(f.MAC1[:])
-	buf.Write(f.MAC2[:])
-	buf.Write(f.MAC3[:])
+	for i := 0; i < 3 && i < len(f.Addresses); i++ {
+		buf.Write(f.Addresses[i][:])
+	}
 
-	binary.BigEndian.PutUint16(numBuf, f.SequenceControl)
-	buf.Write(numBuf)
+	if f.SequenceControl != nil {
+		binary.BigEndian.PutUint16(numBuf, *f.SequenceControl)
+		buf.Write(numBuf)
+	}
 
-	if f.MAC4 != nil {
-		buf.Write((*f.MAC4)[:])
+	if len(f.Addresses) == 4 {
+		buf.Write(f.Addresses[3][:])
+	}
+
+	if f.CarriedFrameControl != nil {
+		binary.BigEndian.PutUint16(numBuf, *f.CarriedFrameControl)
+		buf.Write(numBuf)
+	}
+
+	if f.QoSControl != nil {
+		binary.BigEndian.PutUint16(numBuf, *f.QoSControl)
+		buf.Write(numBuf)
+	}
+
+	if f.HTControlField != nil {
+		bigNumBuf := make([]byte, 4)
+		binary.BigEndian.PutUint32(bigNumBuf, *f.HTControlField)
+		buf.Write(bigNumBuf)
 	}
 
 	buf.Write(f.Payload)
@@ -277,16 +321,30 @@ func (f *Frame) String() string {
 		}
 	}
 
-	description.WriteRune(' ')
-	description.WriteString(f.MAC1.String())
-	description.WriteString(",")
-	description.WriteString(f.MAC2.String())
-	description.WriteString(",")
-	description.WriteString(f.MAC3.String())
-	description.WriteRune(' ')
+	description.WriteString(" durID=")
 	description.WriteString(strconv.Itoa(int(f.DurationID)))
-	description.WriteRune(' ')
-	description.WriteString(strconv.Itoa(int(f.SequenceControl)))
+	description.WriteString(" addrs=")
+	description.WriteString(fmt.Sprint(f.Addresses))
+
+	if f.SequenceControl != nil {
+		description.WriteString(" seq=")
+		description.WriteString(strconv.Itoa(int(*f.SequenceControl)))
+	}
+
+	if f.CarriedFrameControl != nil {
+		description.WriteString(" carriedFC=")
+		description.WriteString(strconv.Itoa(int(*f.CarriedFrameControl)))
+	}
+
+	if f.QoSControl != nil {
+		description.WriteString(" qosCtl=")
+		description.WriteString(strconv.Itoa(int(*f.QoSControl)))
+	}
+
+	if f.HTControlField != nil {
+		description.WriteString(" htCtl=")
+		description.WriteString(strconv.FormatUint(uint64(*f.HTControlField), 10))
+	}
 
 	if len(f.Payload) > 0 {
 		description.WriteRune(':')
@@ -298,6 +356,107 @@ func (f *Frame) String() string {
 	}
 
 	return description.String()
+}
+
+// decodeHeaderFields decodes all of the header fields after the frame control
+// field and the duration ID field.
+// The supplied data should start at the first header field and end before
+// the checksum.
+// This returns the number of bytes consumed by the header, and a possible
+// buffer underflow error.
+func (f *Frame) decodeHeaderFields(data []byte) (int, error) {
+	var addressCount int
+	var hasSequenceControl bool
+	var hasCarriedFrameControl bool
+	var hasQoSControl bool
+	var hasHTControl bool
+
+	switch f.Type.Type() {
+	case FrameMajorTypeData:
+		hasSequenceControl = true
+		if f.ToDS && f.FromDS {
+			addressCount = 4
+		} else {
+			addressCount = 3
+		}
+		if f.Type.Subtype() >= 8 {
+			hasQoSControl = true
+			hasHTControl = f.Order
+		}
+	case FrameMajorTypeManagement:
+		hasSequenceControl = true
+		addressCount = 3
+		hasHTControl = f.Order
+	case FrameMajorTypeControl:
+		switch f.Type {
+		case FrameTypeControlWrapper:
+			hasHTControl = true
+			hasCarriedFrameControl = true
+			fallthrough
+		case FrameTypeCTS, FrameTypeACK:
+			addressCount = 1
+		case FrameTypeRTS, FrameTypePSPoll, FrameTypeCFEnd, FrameTypeCFEndCFAck,
+			FrameTypeBlockAck, FrameTypeBlockAckRequest:
+			addressCount = 2
+		}
+	}
+
+	offset := 0
+
+	f.Addresses = make([]MAC, addressCount)
+	for i := 0; i < addressCount && i < 3; i++ {
+		if offset+6 >= len(data) {
+			return 0, ErrBufferOverflow
+		}
+		copy(f.Addresses[i][:], data[offset:])
+		offset += 6
+	}
+
+	if hasSequenceControl {
+		if offset+2 > len(data) {
+			return 0, ErrBufferUnderflow
+		}
+		num := binary.LittleEndian.Uint16(data[offset:])
+		f.SequenceControl = &num
+		offset += 2
+	}
+
+	if addressCount == 4 {
+		if offset+6 >= len(data) {
+			return 0, ErrBufferUnderflow
+		}
+		copy(f.Addresses[3][:], data[offset:])
+		offset += 6
+	}
+
+	if hasCarriedFrameControl {
+		if offset+2 >= len(data) {
+			return 0, ErrBufferUnderflow
+		}
+		num := binary.LittleEndian.Uint16(data[offset:])
+		f.CarriedFrameControl = &num
+		offset += 2
+	}
+
+	if hasQoSControl {
+		if offset+2 >= len(data) {
+			return 0, ErrBufferUnderflow
+		}
+		num := binary.LittleEndian.Uint16(data[offset:])
+		f.QoSControl = &num
+		offset += 2
+	}
+
+	if hasHTControl {
+		if offset+4 >= len(data) {
+			return 0, ErrBufferUnderflow
+		}
+		num := binary.LittleEndian.Uint32(data[offset:])
+		f.HTControlField = &num
+		offset += 4
+	}
+
+	return offset, nil
 }
 
 func byteToHex(n byte) string {

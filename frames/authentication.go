@@ -7,9 +7,7 @@ import (
 
 // Authentication frames are used at the beginning of a new client-router connection.
 type Authentication struct {
-	MAC1 MAC
-	MAC2 MAC
-	MAC3 MAC
+	Addresses []MAC
 
 	Algorithm      uint16
 	SequenceNumber uint16
@@ -22,9 +20,7 @@ type Authentication struct {
 // This is useful for every kind of network besides WEP networks.
 func NewAuthenticationOpen(bssid, client MAC) *Authentication {
 	return &Authentication{
-		MAC1:           bssid,
-		MAC2:           client,
-		MAC3:           bssid,
+		Addresses:      []MAC{bssid, client, bssid},
 		SequenceNumber: 1,
 		Elements:       ManagementElements{},
 	}
@@ -38,9 +34,7 @@ func DecodeAuthentication(f *Frame) (auth *Authentication, err error) {
 
 	var res Authentication
 
-	res.MAC1 = f.MAC1
-	res.MAC2 = f.MAC2
-	res.MAC3 = f.MAC3
+	res.Addresses = f.Addresses
 
 	res.Algorithm = binary.LittleEndian.Uint16(f.Payload)
 	res.SequenceNumber = binary.LittleEndian.Uint16(f.Payload[2:])
@@ -66,13 +60,13 @@ func (a *Authentication) EncodeToFrame() *Frame {
 	buf.Write(header)
 	buf.Write(a.Elements.Encode())
 
+	var seqControl uint16
 	return &Frame{
-		Version: 0,
-		Type:    FrameTypeAuthentication,
-		MAC1:    a.MAC1,
-		MAC2:    a.MAC2,
-		MAC3:    a.MAC3,
-		Payload: buf.Bytes(),
+		Version:         0,
+		Type:            FrameTypeAuthentication,
+		SequenceControl: &seqControl,
+		Addresses:       a.Addresses,
+		Payload:         buf.Bytes(),
 	}
 }
 
