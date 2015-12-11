@@ -48,7 +48,7 @@ func DecodeAuthentication(f *Frame) (auth *Authentication, err error) {
 	return &res, nil
 }
 
-// Encode encodes an authentication frame.
+// EncodeToFrame generates a Frame which represents this authentication frame.
 func (a *Authentication) EncodeToFrame() *Frame {
 	var buf bytes.Buffer
 
