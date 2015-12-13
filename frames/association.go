@@ -13,7 +13,7 @@ type AssocRequest struct {
 	Capabilities uint16
 	Interval     uint16
 
-	Elements ManagementElements
+	Elements Elements
 }
 
 // DecodeAssocRequest extracts association request information from a Frame.
@@ -30,7 +30,7 @@ func DecodeAssocRequest(f *Frame) (assocRequest *AssocRequest, err error) {
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload)
 	res.Interval = binary.LittleEndian.Uint16(f.Payload[2:])
 
-	res.Elements, err = DecodeManagementElements(f.Payload[4:])
+	res.Elements, err = DecodeElements(f.Payload[4:])
 	if err != nil {
 		return
 	}
@@ -68,7 +68,7 @@ type AssocResponse struct {
 	StatusCode    uint16
 	AssociationID uint16
 
-	Elements ManagementElements
+	Elements Elements
 }
 
 // DecodeAssocResponse extracts association request information from a Frame.
@@ -86,7 +86,7 @@ func DecodeAssocResponse(f *Frame) (assocResponse *AssocResponse, err error) {
 	res.StatusCode = binary.LittleEndian.Uint16(f.Payload[2:])
 	res.AssociationID = binary.LittleEndian.Uint16(f.Payload[4:])
 
-	res.Elements, err = DecodeManagementElements(f.Payload[6:])
+	res.Elements, err = DecodeElements(f.Payload[6:])
 	if err != nil {
 		return
 	}

@@ -13,7 +13,7 @@ type Beacon struct {
 	Interval     uint16
 	Capabilities uint16
 
-	Elements ManagementElements
+	Elements Elements
 }
 
 // DecodeBeacon extracts beacon information from a Frame.
@@ -29,7 +29,7 @@ func DecodeBeacon(f *Frame) (beacon *Beacon, err error) {
 	res.Interval = binary.LittleEndian.Uint16(f.Payload[8:])
 	res.Capabilities = binary.LittleEndian.Uint16(f.Payload[10:])
 
-	res.Elements, err = DecodeManagementElements(f.Payload[12:])
+	res.Elements, err = DecodeElements(f.Payload[12:])
 	if err != nil {
 		return
 	}
@@ -39,16 +39,12 @@ func DecodeBeacon(f *Frame) (beacon *Beacon, err error) {
 
 // SSID returns a string representation of the SSID element.
 func (f *Beacon) SSID() string {
-	ssidTag := f.Elements.Get(ManagementTagSSID)
-	if ssidTag == nil {
-		return ""
-	}
-	return string(ssidTag)
+	return string(f.Elements.Get(ElementIDSSID))
 }
 
-// Channel returns an integer representation of the channel element.
+// Channel returns the station's self-reported channel number.
 func (f *Beacon) Channel() int {
-	channel := f.Elements.Get(ManagementTagDSSSParameterSet)
+	channel := f.Elements.Get(ElementIDDSSSParameterSet)
 	if channel == nil || len(channel) != 1 {
 		return -1
 	}
@@ -64,24 +60,26 @@ func (f *Beacon) BSSDescription() BSSDescription {
 		Channel: f.Channel(),
 	}
 
-	// TODO: figure out the best way to determine the type.
-	// See section 8.4.1.4 of the IEEE 802.11-2012 spec.
-	if (f.Capabilities & 2) != 0 {
-		res.Type = BSSTypeInfrastructure
-	} else if (f.Capabilities & 3) == 0 {
+	// NOTE: see section 8.4.1.4 of the IEEE 802.11-2012 spec.
+	if (f.Capabilities & 3) == 0 {
 		res.Type = BSSTypeMesh
+	} else if (f.Capabilities & 2) != 0 {
+		res.Type = BSSTypeIndependent
+	} else if (f.Capabilities & 1) != 0 {
+		res.Type = BSSTypeInfrastructure
 	}
 
-	res.BasicRates = []byte{}
 	res.OperationalRates = []byte{}
 
-	for _, rate := range f.Elements.Get(ManagementTagSupportedRates) {
+	// NOTE: basic rates have the highest bit set, others do not.
+
+	for _, rate := range f.Elements.Get(ElementIDSupportedRates) {
 		if (rate & 0x80) != 0 {
 			res.BasicRates = append(res.BasicRates, rate&0x7f)
 		}
 		res.OperationalRates = append(res.OperationalRates, rate&0x7f)
 	}
-	for _, rate := range f.Elements.Get(ManagementTagExtendedSupportedRates) {
+	for _, rate := range f.Elements.Get(ElementIDExtendedSupportedRates) {
 		if (rate & 0x80) != 0 {
 			res.BasicRates = append(res.BasicRates, rate&0x7f)
 		}

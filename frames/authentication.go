@@ -13,7 +13,7 @@ type Authentication struct {
 	SequenceNumber uint16
 	StatusCode     uint16
 
-	Elements ManagementElements
+	Elements Elements
 }
 
 // NewAuthenticationOpen generates an initial authentication frame for an open network.
@@ -22,7 +22,7 @@ func NewAuthenticationOpen(bssid, client MAC) *Authentication {
 	return &Authentication{
 		Addresses:      []MAC{bssid, client, bssid},
 		SequenceNumber: 1,
-		Elements:       ManagementElements{},
+		Elements:       Elements{},
 	}
 }
 
@@ -40,7 +40,7 @@ func DecodeAuthentication(f *Frame) (auth *Authentication, err error) {
 	res.SequenceNumber = binary.LittleEndian.Uint16(f.Payload[2:])
 	res.StatusCode = binary.LittleEndian.Uint16(f.Payload[4:])
 
-	res.Elements, err = DecodeManagementElements(f.Payload[6:])
+	res.Elements, err = DecodeElements(f.Payload[6:])
 	if err != nil {
 		return
 	}

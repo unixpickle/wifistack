@@ -26,9 +26,9 @@ func main() {
 	beacon.Interval = 25
 
 	copy(beacon.BSSID[1:], []byte("HELLO"))
-	beacon.Elements = frames.ManagementElements{
-		{frames.ManagementTagSSID, []byte("Spoofed Network")},
-		{frames.ManagementTagDSSSParameterSet, []byte{11}},
+	beacon.Elements = frames.Elements{
+		{frames.ElementIDSSID, []byte("Spoofed Network")},
+		{frames.ElementIDDSSSParameterSet, []byte{11}},
 	}
 	frameData := beacon.EncodeToFrame().Encode()
 	for {

@@ -97,9 +97,9 @@ func (h *Handshaker) associate(timeout <-chan time.Time) error {
 		// NOTE: this is the interval my phone used.
 		Interval: 3,
 
-		Elements: frames.ManagementElements{
-			{frames.ManagementTagSSID, []byte(h.BSS.SSID)},
-			{frames.ManagementTagSupportedRates, h.BSS.BasicRates},
+		Elements: frames.Elements{
+			{frames.ElementIDSSID, []byte(h.BSS.SSID)},
+			{frames.ElementIDSupportedRates, h.BSS.BasicRates},
 		},
 	}
 
