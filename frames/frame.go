@@ -150,8 +150,8 @@ var frameTypeNames map[FrameType]string = map[FrameType]string{
 type Frame struct {
 	Version         int
 	Type            FrameType
-	FromDS          bool
 	ToDS            bool
+	FromDS          bool
 	MoreFrag        bool
 	Retry           bool
 	PowerManagement bool
@@ -217,7 +217,7 @@ func DecodeFrame(data []byte) (*Frame, error) {
 		return nil, ErrUnknownFrameType
 	}
 
-	flags := []*bool{&res.FromDS, &res.ToDS, &res.MoreFrag, &res.Retry, &res.PowerManagement,
+	flags := []*bool{&res.ToDS, &res.FromDS, &res.MoreFrag, &res.Retry, &res.PowerManagement,
 		&res.MoreData, &res.Encrypted, &res.Order}
 	for i, flagPtr := range flags {
 		if (data[1] & (1 << uint(i))) != 0 {
@@ -250,7 +250,7 @@ func (f *Frame) Encode() []byte {
 	buf.WriteByte(byte((f.Type.Type() << 2) | (f.Type.Subtype() << 4) | f.Version))
 
 	var flagByte byte
-	flags := []bool{f.FromDS, f.ToDS, f.MoreFrag, f.Retry, f.PowerManagement,
+	flags := []bool{f.ToDS, f.FromDS, f.MoreFrag, f.Retry, f.PowerManagement,
 		f.MoreData, f.Encrypted, f.Order}
 	for i, flag := range flags {
 		if flag {
@@ -311,7 +311,7 @@ func (f *Frame) String() string {
 	description.WriteString(strconv.Itoa(f.Version))
 	description.WriteString("):")
 
-	flags := []bool{f.FromDS, f.ToDS, f.MoreFrag, f.Retry, f.PowerManagement,
+	flags := []bool{f.ToDS, f.FromDS, f.MoreFrag, f.Retry, f.PowerManagement,
 		f.MoreData, f.Encrypted, f.Order}
 	for _, b := range flags {
 		if b {
@@ -405,7 +405,7 @@ func (f *Frame) decodeHeaderFields(data []byte) (int, error) {
 
 	f.Addresses = make([]MAC, addressCount)
 	for i := 0; i < addressCount && i < 3; i++ {
-		if offset+6 >= len(data) {
+		if offset+6 > len(data) {
 			return 0, ErrBufferOverflow
 		}
 		copy(f.Addresses[i][:], data[offset:])
@@ -422,7 +422,7 @@ func (f *Frame) decodeHeaderFields(data []byte) (int, error) {
 	}
 
 	if addressCount == 4 {
-		if offset+6 >= len(data) {
+		if offset+6 > len(data) {
 			return 0, ErrBufferUnderflow
 		}
 		copy(f.Addresses[3][:], data[offset:])
@@ -430,7 +430,7 @@ func (f *Frame) decodeHeaderFields(data []byte) (int, error) {
 	}
 
 	if hasCarriedFrameControl {
-		if offset+2 >= len(data) {
+		if offset+2 > len(data) {
 			return 0, ErrBufferUnderflow
 		}
 		num := binary.LittleEndian.Uint16(data[offset:])
@@ -439,7 +439,7 @@ func (f *Frame) decodeHeaderFields(data []byte) (int, error) {
 	}
 
 	if hasQoSControl {
-		if offset+2 >= len(data) {
+		if offset+2 > len(data) {
 			return 0, ErrBufferUnderflow
 		}
 		num := binary.LittleEndian.Uint16(data[offset:])
@@ -448,7 +448,7 @@ func (f *Frame) decodeHeaderFields(data []byte) (int, error) {
 	}
 
 	if hasHTControl {
-		if offset+4 >= len(data) {
+		if offset+4 > len(data) {
 			return 0, ErrBufferUnderflow
 		}
 		num := binary.LittleEndian.Uint32(data[offset:])
