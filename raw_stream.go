@@ -55,6 +55,7 @@ func (s *RawStream) Incoming() <-chan gofi.RadioPacket {
 // Outgoing returns the channel of outgoing frames.
 // To write to the stream, write to this channel.
 // To close the stream, simply close this channel.
+// When you close the stream, the underlying Handle is closed as well.
 func (s *RawStream) Outgoing() chan<- gofi.Frame {
 	return s.outgoing
 }
