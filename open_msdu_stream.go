@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/unixpickle/gofi"
 	"github.com/unixpickle/wifistack/frames"
 )
 
@@ -16,9 +17,8 @@ type OpenMSDUStreamConfig struct {
 	// fragmented into multiple MPDUs.
 	FragmentThreshold int
 
-	// DataRate is the data rate at which packets will be sent, in
-	// units of 500Kb/s.
-	DataRate int
+	// DataRate is the rate at which data frames will be sent.
+	DataRate gofi.DataRate
 
 	// BSSID is the BSS identifier for the access point.
 	BSSID frames.MAC
@@ -212,8 +212,9 @@ func (o *OpenMSDUStream) sendOutgoingData(msdu MSDU) bool {
 
 	SendLoop:
 		for {
+			outgoing := OutgoingFrame{Frame: frame.Encode(), Rate: o.config.DataRate}
 			select {
-			case o.config.Stream.Outgoing() <- frame.Encode():
+			case o.config.Stream.Outgoing() <- outgoing:
 			case <-o.closeChan:
 				return false
 			}

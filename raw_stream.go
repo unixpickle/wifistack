@@ -12,7 +12,7 @@ type RawStream struct {
 	handle gofi.Handle
 
 	incoming <-chan gofi.RadioPacket
-	outgoing chan<- gofi.Frame
+	outgoing chan<- OutgoingFrame
 
 	receiveFailed chan struct{}
 
@@ -25,7 +25,7 @@ type RawStream struct {
 // handle anymore, even to close it.
 func NewRawStream(h gofi.Handle) *RawStream {
 	incoming := make(chan gofi.RadioPacket, 16)
-	outgoing := make(chan gofi.Frame)
+	outgoing := make(chan OutgoingFrame)
 	res := &RawStream{
 		handle:        h,
 		incoming:      incoming,
@@ -53,11 +53,16 @@ func (s *RawStream) Incoming() <-chan gofi.RadioPacket {
 }
 
 // Outgoing returns the channel of outgoing frames.
-// To write to the stream, write to this channel.
+// To write to the stream, send to this channel.
 // To close the stream, simply close this channel.
 // When you close the stream, the underlying Handle is closed as well.
-func (s *RawStream) Outgoing() chan<- gofi.Frame {
+func (s *RawStream) Outgoing() chan<- OutgoingFrame {
 	return s.outgoing
+}
+
+// SupportedRates returns the supported rates of the underlying handle.
+func (s *RawStream) SupportedRates() []gofi.DataRate {
+	return s.handle.SupportedRates()
 }
 
 // SupportedChannels returns the supported channels of the underlying handle.
@@ -90,7 +95,7 @@ func (s *RawStream) incomingLoop(ch chan<- gofi.RadioPacket) {
 	}
 }
 
-func (s *RawStream) outgoingLoop(ch <-chan gofi.Frame) {
+func (s *RawStream) outgoingLoop(ch <-chan OutgoingFrame) {
 	defer func() {
 		// NOTE: this prevents send operations from blocking after the
 		// stream encounters an error.
@@ -107,7 +112,7 @@ func (s *RawStream) outgoingLoop(ch <-chan gofi.Frame) {
 		case f, ok := <-ch:
 			if !ok {
 				return
-			} else if err := s.handle.Send(f); err != nil {
+			} else if err := s.handle.Send(f.Frame, f.Rate); err != nil {
 				s.setFirstErr(err)
 				return
 			}

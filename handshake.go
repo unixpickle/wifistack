@@ -44,7 +44,7 @@ func (h *Handshaker) authenticateOpen(timeout <-chan time.Time) error {
 	authFrame := authPacket.EncodeToFrame()
 	authFrame.DurationID = HandshakeDurationID
 
-	h.Stream.Outgoing() <- authFrame.Encode()
+	h.Stream.Outgoing() <- OutgoingFrame{Frame: authFrame.Encode()}
 
 	for {
 		// NOTE: this guarantees that we will never read more than one packet
@@ -110,7 +110,7 @@ func (h *Handshaker) associate(timeout <-chan time.Time) error {
 	seqControl := uint16(1 << 12)
 	assocReqFrame.SequenceControl = &seqControl
 
-	h.Stream.Outgoing() <- assocReqFrame.Encode()
+	h.Stream.Outgoing() <- OutgoingFrame{Frame: assocReqFrame.Encode()}
 
 	for {
 		// NOTE: see the comment in authenticateOpen() to see why we need an extra select{}.

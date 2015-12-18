@@ -32,7 +32,7 @@ func main() {
 	}
 	frameData := beacon.EncodeToFrame().Encode()
 	for {
-		if err := handle.Send(frameData); err != nil {
+		if err := handle.Send(frameData, 0); err != nil {
 			log.Fatalln("failed to send beacon:", err)
 		}
 		time.Sleep(time.Second / 40)

@@ -2,6 +2,11 @@ package wifistack
 
 import "github.com/unixpickle/gofi"
 
+type OutgoingFrame struct {
+	Frame gofi.Frame
+	Rate  gofi.DataRate
+}
+
 // A Stream is an abstract interface which can transfer 802.11 frames.
 type Stream interface {
 	// Incoming returns the channel to which incoming packets are delivered.
@@ -10,7 +15,10 @@ type Stream interface {
 
 	// Outgoing returns the channel to which outgoing packets should be sent.
 	// You should close() this channel once you are done with the stream.
-	Outgoing() chan<- gofi.Frame
+	Outgoing() chan<- OutgoingFrame
+
+	// SupportedRates returns a list of supported rates in ascending order.
+	SupportedRates() []gofi.DataRate
 
 	// SupportedChannels returns a list of all supported WLAN channels
 	// in no particular order.
