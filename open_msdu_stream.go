@@ -46,12 +46,23 @@ type OpenMSDUStream struct {
 	// acks is used by the incoming loop to pass ack frames to the outgoing loop.
 	acks chan *frames.Frame
 
-	// wg waits for the incoming and outgoing loops to return.
+	// data is used by the incoming loop to filter out and process the data frames.
+	data chan *frames.Frame
+
+	// wg waits for the background loops to return.
 	wg sync.WaitGroup
 
 	// outgoingSequenceNum is the outgoing sequence number.
-	// This is used by the outgoing loop.
+	// It is used by the outgoing loop.
 	outgoingSequenceNum int
+
+	// incomingSequenceNum is the sequence number of the last incoming data frame.
+	// It is used by the incoming data loop.
+	incomingSequenceNum int
+
+	// incomingMSDU is the reconstruction of the current incoming packet.
+	// This is nil if no packet is currently being received.
+	incomingMSDU *partialMSDU
 }
 
 // NewOpenMSDUStream creates an OpenMSDUStream using a configuration.
@@ -61,11 +72,13 @@ func NewOpenMSDUStream(c OpenMSDUStreamConfig) *OpenMSDUStream {
 		closeChan: make(chan struct{}),
 		config:    c,
 		incoming:  make(chan MSDU, 16),
-		outgoing:  make(chan MSDU),
+		outgoing:  make(chan MSDU, 16),
 		acks:      make(chan *frames.Frame, 16),
+		data:      make(chan *frames.Frame, 16),
 	}
-	res.wg.Add(2)
+	res.wg.Add(3)
 	go res.incomingLoop()
+	go res.incomingDataLoop()
 	go res.outgoingLoop()
 	go func() {
 		res.wg.Wait()
@@ -98,7 +111,6 @@ func (o *OpenMSDUStream) ForceClose() {
 func (o *OpenMSDUStream) incomingLoop() {
 	defer func() {
 		o.ForceClose()
-		close(o.incoming)
 		o.wg.Done()
 	}()
 	for {
@@ -123,13 +135,11 @@ func (o *OpenMSDUStream) incomingLoop() {
 			if frame.Type == frames.FrameTypeData {
 				if frame.FromDS && frame.Addresses[0] == o.config.Client &&
 					frame.Addresses[1] == o.config.BSSID {
-					if !o.handleIncomingData(frame) {
-						return
-					}
+					o.data <- frame
 				}
 			} else if frame.Type == frames.FrameTypeACK {
 				if frame.Addresses[0] == o.config.Client {
-					// NOTE: this select{} will prevent malicious clients from hanging the
+					// NOTE: this select{} prevents malicious clients from hanging the
 					// loop by flooding us with fake ACKs.
 					select {
 					case o.acks <- frame:
@@ -172,9 +182,68 @@ func (o *OpenMSDUStream) outgoingLoop() {
 	}
 }
 
+func (o *OpenMSDUStream) incomingDataLoop() {
+	defer func() {
+		o.ForceClose()
+		o.wg.Done()
+		close(o.incoming)
+	}()
+	for {
+		select {
+		case <-o.closeChan:
+			return
+		default:
+		}
+
+		select {
+		case f := <-o.data:
+			if !o.handleIncomingData(f) {
+				return
+			}
+		case <-o.closeChan:
+			return
+		}
+	}
+}
+
 func (o *OpenMSDUStream) handleIncomingData(f *frames.Frame) bool {
-	// TODO: this.
-	return false
+	seqNum := int(*f.SequenceControl) >> 4
+	if o.incomingMSDU == nil || o.incomingSequenceNum != seqNum {
+		o.incomingMSDU = &partialMSDU{}
+		o.incomingSequenceNum = seqNum
+	}
+	o.incomingMSDU.handleFrame(f)
+
+	ackFrame := &frames.Frame{
+		Type:      frames.FrameTypeACK,
+		Addresses: []frames.MAC{f.Addresses[1]},
+	}
+
+	if f.MoreFrag {
+		// TODO: compute this here, as specified in section 8.3.1.4 of the 2012 802.11 spec.
+		ackFrame.DurationID = 2000
+	}
+
+	select {
+	case o.config.Stream.Outgoing() <- OutgoingFrame{Frame: ackFrame.Encode()}:
+	case <-o.closeChan:
+		return false
+	}
+
+	if o.incomingMSDU.complete() {
+		msdu := MSDU{
+			Payload: o.incomingMSDU.msdu(),
+			Remote:  f.Addresses[2],
+		}
+		o.incomingMSDU = nil
+		select {
+		case o.incoming <- msdu:
+		case <-o.closeChan:
+			return false
+		}
+	}
+
+	return true
 }
 
 func (o *OpenMSDUStream) sendOutgoingData(msdu MSDU) bool {
