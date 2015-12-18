@@ -9,7 +9,7 @@ type Stream interface {
 	Incoming() <-chan gofi.RadioPacket
 
 	// Outgoing returns the channel to which outgoing packets should be sent.
-	// You can close() this channel to close the stream.
+	// You should close() this channel once you are done with the stream.
 	Outgoing() chan<- gofi.Frame
 
 	// SupportedChannels returns a list of all supported WLAN channels

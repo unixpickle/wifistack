@@ -90,7 +90,17 @@ func (s *RawStream) incomingLoop(ch chan<- gofi.RadioPacket) {
 }
 
 func (s *RawStream) outgoingLoop(ch <-chan gofi.Frame) {
-	defer s.handle.Close()
+	defer func() {
+		// NOTE: this prevents send operations from blocking after the
+		// stream encounters an error.
+		for {
+			if _, ok := <-ch; !ok {
+				break
+			}
+		}
+		s.handle.Close()
+	}()
+
 	for {
 		select {
 		case f, ok := <-ch:
