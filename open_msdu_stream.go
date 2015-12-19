@@ -11,6 +11,8 @@ import (
 
 const dataResendTimeout = time.Millisecond * 10
 
+var broadcastMAC = frames.MAC{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+
 // OpenMSDUStreamConfig stores the configuration for an OpenMSDUStream.
 type OpenMSDUStreamConfig struct {
 	// FragmentThreshold is the size, in bytes, at which MSDUs should be
@@ -133,8 +135,8 @@ func (o *OpenMSDUStream) incomingLoop() {
 			}
 
 			if frame.Type == frames.FrameTypeData {
-				if frame.FromDS && frame.Addresses[0] == o.config.Client &&
-					frame.Addresses[1] == o.config.BSSID {
+				if frame.FromDS && frame.Addresses[1] == o.config.BSSID &&
+					(frame.Addresses[0] == o.config.Client || frame.Addresses[0] == broadcastMAC) {
 					o.data <- frame
 				}
 			} else if frame.Type == frames.FrameTypeACK {
@@ -297,6 +299,7 @@ func (o *OpenMSDUStream) sendOutgoingData(msdu MSDU) bool {
 					frame.Retry = true
 					continue SendLoop
 				case <-o.acks:
+					println("got ack")
 					break SendLoop
 				}
 			}

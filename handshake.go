@@ -78,6 +78,7 @@ func (h *Handshaker) authenticateOpen(timeout <-chan time.Time) error {
 				auth.Addresses[2] != h.BSS.BSSID {
 				continue
 			}
+			// TODO: send ACK for this frame.
 			if auth.Success() {
 				return nil
 			} else {
@@ -141,6 +142,7 @@ func (h *Handshaker) associate(timeout <-chan time.Time) error {
 			if resp.BSSID != h.BSS.BSSID || resp.Client != h.Client {
 				continue
 			}
+			// TODO: send ACK for this frame.
 			if resp.Success() {
 				return nil
 			} else {

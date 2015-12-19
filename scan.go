@@ -24,6 +24,7 @@ func ScanNetworks(s Stream) (descs <-chan frames.BSSDescription, cancel chan<- s
 
 		bssMap := map[frames.MAC]bool{}
 
+		// TODO: remove channels with duplicate channel numbers but different widths.
 		for _, ch := range s.SupportedChannels() {
 			select {
 			case <-cancelChan:
