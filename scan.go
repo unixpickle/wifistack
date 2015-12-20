@@ -3,6 +3,7 @@ package wifistack
 import (
 	"time"
 
+	"github.com/unixpickle/gofi"
 	"github.com/unixpickle/wifistack/frames"
 )
 
@@ -24,8 +25,7 @@ func ScanNetworks(s Stream) (descs <-chan frames.BSSDescription, cancel chan<- s
 
 		bssMap := map[frames.MAC]bool{}
 
-		// TODO: remove channels with duplicate channel numbers but different widths.
-		for _, ch := range s.SupportedChannels() {
+		for _, ch := range scanChannels(s) {
 			select {
 			case <-cancelChan:
 				return
@@ -69,4 +69,16 @@ func ScanNetworks(s Stream) (descs <-chan frames.BSSDescription, cancel chan<- s
 	}()
 
 	return descChan, cancelChan
+}
+
+func scanChannels(s Stream) []gofi.Channel {
+	res := []gofi.Channel{}
+	usedNumbers := map[int]bool{}
+	for _, ch := range s.SupportedChannels() {
+		if !usedNumbers[ch.Number] {
+			usedNumbers[ch.Number] = true
+			res = append(res, ch)
+		}
+	}
+	return res
 }
