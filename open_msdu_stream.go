@@ -299,7 +299,6 @@ func (o *OpenMSDUStream) sendOutgoingData(msdu MSDU) bool {
 					frame.Retry = true
 					continue SendLoop
 				case <-o.acks:
-					println("got ack")
 					break SendLoop
 				}
 			}
