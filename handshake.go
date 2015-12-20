@@ -78,7 +78,13 @@ func (h *Handshaker) authenticateOpen(timeout <-chan time.Time) error {
 				auth.Addresses[2] != h.BSS.BSSID {
 				continue
 			}
-			// TODO: send ACK for this frame.
+
+			ack := &frames.Frame{
+				Type:      frames.FrameTypeACK,
+				Addresses: []frames.MAC{auth.Addresses[2]},
+			}
+			h.Stream.Outgoing() <- OutgoingFrame{Frame: ack.Encode()}
+
 			if auth.Success() {
 				return nil
 			} else {
@@ -142,7 +148,13 @@ func (h *Handshaker) associate(timeout <-chan time.Time) error {
 			if resp.BSSID != h.BSS.BSSID || resp.Client != h.Client {
 				continue
 			}
-			// TODO: send ACK for this frame.
+
+			ack := &frames.Frame{
+				Type:      frames.FrameTypeACK,
+				Addresses: []frames.MAC{resp.BSSID},
+			}
+			h.Stream.Outgoing() <- OutgoingFrame{Frame: ack.Encode()}
+
 			if resp.Success() {
 				return nil
 			} else {
